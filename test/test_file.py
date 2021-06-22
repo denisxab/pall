@@ -3,7 +3,7 @@ from os.path import getsize
 from typing import List, Tuple, Dict, Set
 from file import TxtFile, Json
 
-a = 10
+a = 1021
 
 
 class TestFile(unittest.TestCase):
