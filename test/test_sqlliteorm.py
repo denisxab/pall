@@ -5,9 +5,6 @@ from sqlite3 import OperationalError
 
 from sqlliteorm import SqlLite, SqlName
 
-вввa = 12312312313
-
-
 
 class TestSqlLite(unittest.TestCase):
 
