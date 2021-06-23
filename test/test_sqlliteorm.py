@@ -5,7 +5,7 @@ from sqlite3 import OperationalError
 
 from sqlliteorm import SqlLite, SqlName
 
-a = 12312312313
+вввa = 12312312313
 
 
 
