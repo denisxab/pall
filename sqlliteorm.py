@@ -7,7 +7,7 @@ from typing import List, Tuple, Dict, Union
 class SqlName:
     PK: str = "PRIMARY KEY"  # Должны содержать ункальные значения
     NN: str = "NOT NULL"  # Все столбцы по умолчанию будт заполнены Null
-    NND = lambda default: "NOT NULL DEFAULT {0}".format(
+    NND = lambda default=None: "NOT NULL DEFAULT {0}".format(
         default)  # Все столбцы будут по умолчанию заполнены указанными значениями
     IDAUTO: str = "PRIMARY KEY AUTOINCREMENT"  # Авто заполение строки. подходит для id
 
@@ -154,7 +154,8 @@ class SqlLite:
         if type(data) == str:
             if data.find("bytes") != -1:
                 raise TypeError("Нельзя отпраять BLOB в формате строки. Воспользуйтесь добавление данных через list")
-            self.cursor.execute("INSERT INTO {0} {1} VALUES {2}".format(name_tables, tuple(self.header_db.keys()), data))
+            self.cursor.execute(
+                "INSERT INTO {0} {1} VALUES {2}".format(name_tables, tuple(self.header_db.keys()), data))
 
         else:
             res: str = "({}".format("?, " * len(data))[:-2:]
@@ -165,9 +166,8 @@ class SqlLite:
                 if tuple(data.keys() - self.header_db.keys()):
                     raise IndexError("Именя переданного столбца неуществует")
 
-                self.cursor.execute(
-                    "INSERT INTO {0} {1} VALUES {2}".format(name_tables, tuple(data.keys()), res),
-                    tuple(data.values()))
+                self.cursor.execute("INSERT INTO {0} {1} VALUES {2}".format(name_tables, tuple(data.keys()), res),
+                                    tuple(data.values()))
 
             # Конвертация типов list, tuple в SQL запрос
             elif type(data) == tuple or type(data) == list:
@@ -177,8 +177,21 @@ class SqlLite:
                 self.cursor.execute(
                     "INSERT INTO {0} {1} VALUES {2}".format(name_tables, tuple(self.header_db.keys()), res),
                     data)
+        self.SaveDb()
 
-    def GetDb(self, name_tables: str) -> list:  # +
+    def ExecuteManyDb(self, name_tables: str, data: List[Union[List, Tuple]]):  # +
+        if type(data) != list:
+            raise TypeError("Должен быть тип List")
+
+        res: str = "({}".format("?, " * len(data))[:-2:]
+        res += ");"
+
+        self.cursor.executemany(
+            "INSERT INTO {nt} {name_arg} VALUES {values}".format(nt=name_tables, name_arg=tuple(self.header_db.keys()),
+                                                                 values=res), data)
+        self.SaveDb()
+
+    def GetTable(self, name_tables: str) -> list:  # +
         """
         Конвертация bytes в обьекта SQl BLOB и обратно
         a = Binary(b"101101")
@@ -188,18 +201,32 @@ class SqlLite:
         self.cursor.execute('SELECT * FROM {0}'.format(name_tables))
         return self.cursor.fetchall()
 
+    def GetColumne(self, name_tables: str, name_column: str) -> list:
+        # Получить данные из таблицы
+        self.cursor.execute('SELECT {0} FROM {1}'.format(name_column, name_tables))
+        return self.cursor.fetchall()
 
+    def SearchTable(self, name_tables: str, name_column: str, questions: str) -> bool:
+        self.cursor.execute(
+            'SELECT {nc} FROM {nt} WHERE {nc} = {q}'.format(nc=name_column, nt=name_tables, q=questions))
+
+        return True if self.cursor.fetchone() != None else False
+
+#https://www.youtube.com/watch?v=gm0p517EG7o
 if __name__ == '__main__':
     name_db = 'example.db'
     name_table = "stocks"
     sq = SqlLite(name_db)
     sq.DeleteTable(name_table)
 
-    sq.CreateTable(name_table, {"id": (int, SqlName.IDAUTO), "name": str, "old": int})
+    sq.CreateTable(name_table, {"id": (int, SqlName.IDAUTO), "name": str, "old": int, "sex": (str, SqlName.NND())})
     print(sq.header_db)
+    print(toSqlRequest(sq.header_db))
 
     sq.ExecuteDb(name_table, {"name": "Denis", "old": 21})
-    sq.ExecuteDb(name_table, {"name": "Katy", "old": 23})
+    sq.ExecuteDb(name_table, {"name": "Katy", "old": 23, "sex": 1})
     sq.ExecuteDb(name_table, {"name": "Svetha", "old": 24})
+    print(sq.GetTable(name_table))
 
-    print(sq.GetDb(name_table))
+    print(sq.GetColumne(name_table, "name"))
+    print(sq.SearchTable(name_table, "old", "212"))

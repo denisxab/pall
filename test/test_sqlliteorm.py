@@ -31,7 +31,7 @@ class TestSqlLite(unittest.TestCase):
         self.assertEqual(self.sq.header_db, test_header)
         self.sq.ExecuteDb(self.name_table, {"id": 1, "name": "Anton", "old": 30, "salary": 3000.11})
         self.sq.ExecuteDb(self.name_table, {"id": 2, "name": "Katy", "old": 22, "salary": 3200.23})
-        self.assertEqual(self.sq.GetDb(self.name_table), [(1, 'Anton', 30, 3000.11), (2, 'Katy', 22, 3200.23)])
+        self.assertEqual(self.sq.GetTable(self.name_table), [(1, 'Anton', 30, 3000.11), (2, 'Katy', 22, 3200.23)])
         self.sq.DeleteTable(self.name_table)
 
         # Проверка записи с AUTOINCREMENT
@@ -43,7 +43,7 @@ class TestSqlLite(unittest.TestCase):
         self.assertEqual(self.sq.header_db, test_header)
         self.sq.ExecuteDb(self.name_table, {"name": "Anton", "old": 30, "salary": 3000.33})
         self.sq.ExecuteDb(self.name_table, {"name": "Katy", "old": 22, "salary": 3200.54})
-        self.assertEqual(self.sq.GetDb(self.name_table), [(1, 'Anton', 30, 3000.33), (2, 'Katy', 22, 3200.54)])
+        self.assertEqual(self.sq.GetTable(self.name_table), [(1, 'Anton', 30, 3000.33), (2, 'Katy', 22, 3200.54)])
         self.sq.DeleteTable(self.name_table)
 
         # Проверка на неправильное имя столбца в передаче параметров dict
@@ -57,6 +57,22 @@ class TestSqlLite(unittest.TestCase):
         self.assertRaises(IndexError, self.sq.ExecuteDb, self.name_table,
                           {"id": 2, "ERORRR123132RRRRRR": "Katy", "old": 22, "salary": 3200})
         self.sq.DeleteTable(self.name_table)
+
+    def test_ExecuteManyDb(self):
+        # Проверека запси list в Бд
+        test_header = {"id": (int, SqlName.PK),
+                       "name": str,
+                       "old": (int, SqlName.NND(5)),
+                       "salary": (float, SqlName.NN)}
+        test_data_list = [
+            (1, "Denis", 13, 23232.1223),
+            (2, "Enis", 123, 5656.123),
+            (3, "Renyi", 133, 365.4),
+            (4, "Tennis", 132, 436.123),
+        ]
+        self.sq.CreateTable(self.name_table, test_header)
+        self.sq.ExecuteManyDb(self.name_table, test_data_list)
+        self.assertEqual(self.sq.GetTable(self.name_table), test_data_list)
 
     def test_CreateTable(self):
         # Првоерка создания таблицы
@@ -85,19 +101,19 @@ class TestSqlLite(unittest.TestCase):
                        "salary": (float, SqlName.NN)}
         self.assertRaises(LookupError, self.sq.CreateTable, self.name_table, test_header)
 
-    def test_ExecuteDb_and_GetDb(self):
+    def test_ExecuteDb_and_GetTable(self):
         # Првоерка коректности записи данных в таблицу
         # Через dict
         test_header = {"date": str, "trans": str, "symbol": str, "qty": float, "price": float}
         test_data = ('2006-01-05', 'BUY', 'RAT', 100, 35.14)
         self.sq.CreateTable(self.name_table, test_header)
         self.sq.ExecuteDb(self.name_table, test_data)
-        self.assertEqual(self.sq.GetDb(self.name_table)[0], test_data)
+        self.assertEqual(self.sq.GetTable(self.name_table)[0], test_data)
         self.sq.DeleteTable(self.name_table)
         # Через SQL запрос
         self.sq.CreateTable(self.name_table, test_header)
         self.sq.ExecuteDb(self.name_table, "('2006-01-05','BUY','RAT',100,35.14)")
-        self.assertEqual(self.sq.GetDb(self.name_table)[0], test_data)
+        self.assertEqual(self.sq.GetTable(self.name_table)[0], test_data)
         self.sq.DeleteTable(self.name_table)
 
     def test_ExecuteDb_Blob(self):
@@ -108,13 +124,13 @@ class TestSqlLite(unittest.TestCase):
         self.sq.CreateTable(self.name_table, test_header)
         self.assertEqual(self.sq.header_db, test_header)
         self.sq.ExecuteDb(self.name_table, test_data)
-        self.assertEqual(self.sq.GetDb(self.name_table)[0], test_data)
+        self.assertEqual(self.sq.GetTable(self.name_table)[0], test_data)
         self.sq.DeleteTable(self.name_table)
         # List
         self.sq.CreateTable(self.name_table, test_header)
         self.assertEqual(self.sq.header_db, test_header)
         self.sq.ExecuteDb(self.name_table, list(test_data))
-        self.assertEqual(self.sq.GetDb(self.name_table)[0], test_data)
+        self.assertEqual(self.sq.GetTable(self.name_table)[0], test_data)
         self.sq.DeleteTable(self.name_table)
 
         # Проверка попытки записи типа BLOB через строку -> должны быть ошибка TypeError
@@ -156,8 +172,8 @@ class TestSqlLite(unittest.TestCase):
         for nf in listdir("."):
             if len(nf.split(".")) == 2 and nf.split(".")[1] == "py":
                 self.sq.ExecuteDb(self.name_table, (nf, getsize(nf)))
-        self.assertEqual(self.sq.GetDb(self.name_table), [(nf, getsize(nf)) for nf in listdir(".") if
-                                                          len(nf.split(".")) == 2 and nf.split(".")[1] == "py"])
+        self.assertEqual(self.sq.GetTable(self.name_table), [(nf, getsize(nf)) for nf in listdir(".") if
+                                                             len(nf.split(".")) == 2 and nf.split(".")[1] == "py"])
 
     def __del__(self):
         self.sq.DeleteDb()
