@@ -52,10 +52,10 @@ class TxtFile(File):
 
     def __init__(self, nameFile: str):
         tmp = nameFile.split(".")
-        if len(tmp) == 2 and tmp[1] == "txt":
-            File.__init__(self, nameFile)
-        else:
+        if any((len(tmp) != 2, tmp[1] != "txt")):
             raise ValueError("Файл должен иметь разшерение .txt")
+
+        File.__init__(self, nameFile)
 
     def readFile(self) -> str:  # +
         with open(self.nameFile, "r") as f:
@@ -92,10 +92,10 @@ class Json(File):
 
     def __init__(self, nameFile: str):
         tmp = nameFile.split(".")
-        if len(tmp) == 2 and tmp[1] == "json":
-            File.__init__(self, nameFile)
-        else:
+        if len(tmp) != 2 or tmp[1] != "json":
             raise ValueError("Файл должен иметь разшерение .json")
+
+        File.__init__(self, nameFile)
 
     def readJsonFile(self) -> Union[List, Tuple, Dict, Set]:  # +
         with open(self.nameFile, "r") as read_file:

@@ -3,7 +3,7 @@ from os import remove
 from os.path import exists, abspath
 from typing import List, Tuple, Dict, Union
 
-
+# https://www.youtube.com/watch?v=CbZS9FPBX5E
 class SqlLite:
     """
     - Запись данных в БД
@@ -102,6 +102,7 @@ class SqlLite:
         self.cursor.execute("CREATE TABLE {0} {1}".format(name_table, res))
 
     def ExecuteDb(self, name_table: str, data: Union[List, Tuple, str]):  # +
+
 
         res: str = ""
         if type(data) == str:
