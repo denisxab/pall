@@ -3,7 +3,15 @@ from os import remove
 from os.path import exists, abspath
 from typing import List, Tuple, Dict, Union
 
-# https://www.youtube.com/watch?v=CbZS9FPBX5E
+
+class SqlName:
+    PK: str = "PRIMARY KEY"  # Должны содержать ункальные значения
+    NN: str = "NOT NULL"  # Все столбцы по умолчанию будт заполнены Null
+    NND = lambda default: "NOT NULL DEFAULT {0}".format(
+        default)  # Все столбцы будут по умолчанию заполнены указанными значениями
+    IDAUTO: str = "PRIMARY KEY AUTOINCREMENT"  # Авто заполение строки. подходит для id
+
+
 class SqlLite:
     """
     - Запись данных в БД
@@ -59,7 +67,7 @@ class SqlLite:
             for d in res[1:-1:].split(","):
 
                 k, v = d.strip().split(" ")
-                if v in ["text", "TEXT"]:
+                if v in ["TEXT", "text"]:
                     v = str
                 elif v in ["INTEGER", "integer"]:
                     v = int
@@ -75,61 +83,78 @@ class SqlLite:
                 self.header_db[k] = v
 
         elif type(data) == dict:
+            count_primary_key = False
             # Конвертация словаря в SQL запрос
             res += "("
             for k, v in data.items():
                 res += str(k)
-                if v == str:
+
+                if type(v) == tuple and len(v) == 2:  # Комбенированная запись с параметрами столбца
+
+                    if v[1] == SqlName.PK or v[1] == SqlName.IDAUTO:  # Проверка уникальности Primary Key в таблицы
+                        if not count_primary_key:
+                            count_primary_key = True
+                        else:
+                            raise LookupError("{0} имеет больше одного primary key".format(name_table))
+
+                    tmp = " {0}".format(v[1])
+                    values = v[0]
+                else:  # Обыная запись столбца
+                    tmp = ''
+                    values = v
+
+                if values == str:
                     res += " TEXT"
-                elif v == int:
+                elif values == int:
                     res += " INTEGER"
-                elif v == float:
+                elif values == float:
                     res += " REAL"
-                elif v == bytes:
+                elif values == bytes:
                     res += " BLOB"
-                elif v is None:
+                elif values is None:
                     res += " NULL"
                 else:
                     raise TypeError(
                         "Указан не верный тип данных выбирете str;int;float;None;bytes\n{0}:{1}".format(k, v))
-                res += ', '
+
+                res += "{0}{1}".format(tmp, ", ")
 
             res = res[:-2:]
             res += ");"
             self.header_db = data
 
         # Создание таблицы
-        self.cursor.execute("CREATE TABLE {0} {1}".format(name_table, res))
+        self.cursor.execute("CREATE TABLE IF NOT EXISTS {0} {1}".format(name_table, res))
 
-    def ExecuteDb(self, name_table: str, data: Union[List, Tuple, str]):  # +
+    def ExecuteDb(self, name_table: str, data: Union[List, Tuple, str, bytes]):  # +
 
-
-        res: str = ""
         if type(data) == str:
-            res = data
+            if data in "bytes":
+                raise TypeError("Нельзя отпраять BLOB в формате строки. Воспользуйтесь добавление данных через list")
+            # Запись в курсор
+            self.cursor.execute("INSERT INTO {0} VALUES {1}".format(name_table, data))
 
         # Конвертация типов в str
-        elif type(data) in [tuple, list]:
-
+        elif type(data) == tuple or type(data) == list:
             if len(data) != len(self.header_db):
                 raise IndexError("Разное колличество столбцов таблицы и входных данных")
 
-            res += "("
-            for t in data:
-                res += r"'{0}', ".format(t)
-
-            res = res[:-2:]
+            res: str = "({}".format("?, " * len(data))[:-2:]
             res += ");"
+            self.cursor.execute("INSERT INTO {0} VALUES {1}".format(name_table, res), data)
 
         else:
             raise TypeError("Допустимые типы List, Tuple, str")
 
-        # Запись в курсор
-        self.cursor.execute("INSERT INTO {0} VALUES {1}".format(name_table, res))
-
     def GetDb(self, name_table: str) -> list:  # +
+        """
+        Конвертация bytes в обьекта SQl BLOB и обратно
+        a = Binary(b"101101")
+        print(a.tobytes())
+        """
         # Получить данные из таблицы
-        return [row for row in self.cursor.execute('SELECT * FROM {0}'.format(name_table))]
+        self.cursor.execute('SELECT * FROM {0}'.format(name_table))
+        return self.cursor.fetchall()  # [row for row in self.cursor.execute('SELECT * FROM {0}'.format(name_table))]
 
 
 if __name__ == '__main__':

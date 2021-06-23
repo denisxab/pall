@@ -3,7 +3,7 @@ from os import path, listdir
 from os.path import getsize
 from sqlite3 import OperationalError
 
-from sqlliteorm import SqlLite
+from sqlliteorm import SqlLite, SqlName
 
 
 class TestSqlLite(unittest.TestCase):
@@ -33,6 +33,33 @@ class TestSqlLite(unittest.TestCase):
         self.assertEqual(self.sq.header_db, test_header)
         self.sq.DeleteTable(self.name_table)
 
+        # Провекра Двойного создания Primary Key
+        test_header = {"id": (int, SqlName.IDAUTO),
+                       "url": (int, SqlName.PK),
+                       "name": str,
+                       "old": (int, SqlName.NND(5)),
+                       "salary": (float, SqlName.NN)}
+        self.assertRaises(LookupError, self.sq.CreateTable, (self.name_table, test_header))
+
+
+        # Провекра дополнительынх параметоров к созданию таблицы
+        test_header = {"id": (int, SqlName.IDAUTO),
+                       "name": str,
+                       "old": (int, SqlName.NND(5)),
+                       "salary": (float, SqlName.NN)}
+        self.sq.CreateTable(self.name_table, test_header)
+        self.assertEqual(self.sq.header_db, test_header)
+        self.sq.DeleteTable(self.name_table)
+
+
+        test_header = {"id": (int, SqlName.PK),
+                       "name": str,
+                       "old": (int, SqlName.NND(5)),
+                       "salary": (float, SqlName.NN)}
+        self.sq.CreateTable(self.name_table, test_header)
+        self.assertEqual(self.sq.header_db, test_header)
+        self.sq.DeleteTable(self.name_table)
+
     def test_error_CreateTable(self):
         # Проверка создания таблицы с неправильными данными
         test_header = {"date": str, "trans": list, "symbol": str, "qty": float, "price": float}
@@ -42,7 +69,7 @@ class TestSqlLite(unittest.TestCase):
                           "(date text, trans text, symbol int, qty real, price real)")
 
     def test_ExecuteDb_and_GetDb(self):
-        # Првоерка записи данных в таблицу
+        # Првоерка коректности записи данных в таблицу
         test_header = {"date": str, "trans": str, "symbol": str, "qty": float, "price": float}
         test_data = ('2006-01-05', 'BUY', 'RAT', 100, 35.14)
         self.sq.CreateTable(self.name_table, test_header)
@@ -53,6 +80,29 @@ class TestSqlLite(unittest.TestCase):
         self.sq.CreateTable(self.name_table, test_header)
         self.sq.ExecuteDb(self.name_table, "('2006-01-05','BUY','RAT',100,35.14)")
         self.assertEqual(self.sq.GetDb(self.name_table)[0], test_data)
+        self.sq.DeleteTable(self.name_table)
+
+        # Проверка записи BLOB через
+        # Tuple
+        test_header = {"str": str, "int": int, "float": float, "bytes": bytes}
+        test_data = ("text", 123, 122.32, b"1011")
+        self.sq.CreateTable(self.name_table, test_header)
+        self.assertEqual(self.sq.header_db, test_header)
+        self.sq.ExecuteDb(self.name_table, test_data)
+        self.assertEqual(self.sq.GetDb(self.name_table)[0], test_data)
+        self.sq.DeleteTable(self.name_table)
+        # List
+        self.sq.CreateTable(self.name_table, test_header)
+        self.assertEqual(self.sq.header_db, test_header)
+        self.sq.ExecuteDb(self.name_table, list(test_data))
+        self.assertEqual(self.sq.GetDb(self.name_table)[0], test_data)
+        self.sq.DeleteTable(self.name_table)
+        # Проверка попытки записи типа BLOB через строку -> должны быть ошибка TypeError
+        test_header = {"str": str, "int": int, "float": float, "bytes": bytes}
+        test_data = "('text', '123', '122.32', '{0}')".format(b"0101")
+        self.sq.CreateTable(self.name_table, "(str TEXT, int INTEGER, float REAL, bytes BLOB)")
+        self.assertEqual(self.sq.header_db, test_header)
+        self.assertRaises(TypeError, self.sq.ExecuteDb, (self.name_table, test_data))
         self.sq.DeleteTable(self.name_table)
 
     def test_error_ExecuteDb(self):

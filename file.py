@@ -69,7 +69,7 @@ class TxtFile(File):
         with open(self.nameFile, "w") as f:
             f.write(data)
 
-    def writeBinaryFile(self, data: bytes):  # +
+    def writeBinaryFile(self, data: Union[bytes, memoryview]):  # +
         with open(self.nameFile, "wb") as f:
             f.write(data)
 
