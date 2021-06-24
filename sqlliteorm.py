@@ -113,7 +113,6 @@ class SqlLiteQrm:
     - Чтение данных Из БД
     """
 
-
     def __init__(self, name_dbf: str) -> None:  # +
         self.connection = None
         # Проверка того что разшерение db
@@ -131,13 +130,19 @@ class SqlLiteQrm:
     def __del__(self):  # +
         pass
 
+    def ListTables(self) -> List[str]:  # +
+        with sqlite3.connect(self.name_db) as connection:
+            cursor = connection.cursor()
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+            return [x[0] for x in cursor.fetchall() if x[0] != 'sqlite_sequence']
+
     def __update_header_table(self) -> Dict[str, Dict[str, tuple]]:  # +
         # Получение схемы всех таблиц в бд
         res: Dict[str, Dict[str, tuple]] = {}
 
         with sqlite3.connect(self.name_db) as connection:
             cursor = connection.cursor()
-            for x in self.Tables():
+            for x in self.ListTables():
                 meta = cursor.execute("PRAGMA table_info({0})".format(x))
 
                 """
@@ -172,6 +177,10 @@ class SqlLiteQrm:
 
         return res
 
+    def DeleteDb(self):  # +
+        if exists(self.name_db):
+            remove(abspath(self.name_db))
+
     def DeleteTable(self, name_tables: str):  # +
         if self.header_table.get(name_tables):
             self.header_table.pop(name_tables)
@@ -179,17 +188,13 @@ class SqlLiteQrm:
             cursor = connection.cursor()
             cursor.execute("DROP TABLE IF EXISTS {0};".format(name_tables))  # Удалить таблицу если она существует
 
-    def DeleteDb(self):  # +
-        if exists(self.name_db):
-            remove(abspath(self.name_db))
-
-    def CreateTable(self, name_tables: str, data: Union[str, Dict]):  # +
+    def CreateTable(self, name_ListTables: str, data: Union[str, Dict]):  # +
 
         # Конвертация типов в str
         res: str = ""
         if type(data) == str:
             res = data
-            self.header_table[name_tables] = toDictSql(res)
+            self.header_table[name_ListTables] = toDictSql(res)
 
         elif type(data) == dict:
             res = toSqlRequest(data)
@@ -197,26 +202,25 @@ class SqlLiteQrm:
             for k, v in data.items():
                 data[k] = (v, "") if type(v) != tuple else v
 
-            self.header_table[name_tables] = data
+            self.header_table[name_ListTables] = data
 
         # Создание таблицы
         with sqlite3.connect(self.name_db) as connection:
             cursor = connection.cursor()
-            cursor.execute("CREATE TABLE IF NOT EXISTS {0} {1}".format(name_tables, res))
+            cursor.execute("CREATE TABLE IF NOT EXISTS {0} {1}".format(name_ListTables, res))
 
-    # Запись данных
-    def ExecuteDb(self, name_tables: str, data: Union[str,
-                                                      List[Union[str, bytes, int, float]],
-                                                      Tuple,
-                                                      Dict[str, Union[str, bytes, int, float]]]):  # +
+    def ExecuteTable(self, name_ListTables: str, data: Union[str,
+                                                             List[Union[str, bytes, int, float]],
+                                                             Tuple,
+                                                             Dict[str, Union[str, bytes, int, float]]]):  # +
         if type(data) == str:
             if data.find("bytes") != -1:
                 raise TypeError("Нельзя отпраять BLOB в формате строки. Воспользуйтесь добавление данных через list")
 
             with sqlite3.connect(self.name_db) as connection:
                 cursor = connection.cursor()
-                cursor.execute("INSERT INTO {0} {1} VALUES {2}".format(name_tables,
-                                                                       tuple(self.header_table[name_tables].keys()),
+                cursor.execute("INSERT INTO {0} {1} VALUES {2}".format(name_ListTables,
+                                                                       tuple(self.header_table[name_ListTables].keys()),
                                                                        data))
 
         else:
@@ -224,25 +228,25 @@ class SqlLiteQrm:
 
             # Конвертация типа в dict в SQL запрос
             if type(data) == dict:
-                if tuple(data.keys() - self.header_table[name_tables].keys()):
+                if tuple(data.keys() - self.header_table[name_ListTables].keys()):
                     raise IndexError("Именя переданного столбца неуществует")
 
                 with sqlite3.connect(self.name_db) as connection:
                     cursor = connection.cursor()
-                    cursor.execute("INSERT INTO {0} {1} VALUES ({2})".format(name_tables, tuple(data.keys()), res),
+                    cursor.execute("INSERT INTO {0} {1} VALUES ({2})".format(name_ListTables, tuple(data.keys()), res),
                                    tuple(data.values()))
 
             # Конвертация типов list, tuple в SQL запрос
             elif type(data) == tuple or type(data) == list:
-                if len(data) != len(self.header_table[name_tables]):
+                if len(data) != len(self.header_table[name_ListTables]):
                     raise IndexError("Разное колличество столбцов таблицы и входных данных")
 
                 with sqlite3.connect(self.name_db) as connection:
                     cursor = connection.cursor()
-                    cursor.execute("INSERT INTO {0} {1} VALUES ({2})".format(name_tables, tuple(
-                        self.header_table[name_tables].keys()), res), data)
+                    cursor.execute("INSERT INTO {0} {1} VALUES ({2})".format(name_ListTables, tuple(
+                        self.header_table[name_ListTables].keys()), res), data)
 
-    def ExecuteManyDb(self, name_tables: str, data: List[Union[List, Tuple]]):  # +
+    def ExecuteManyTable(self, name_ListTables: str, data: List[Union[List, Tuple]]):  # +
         if type(data) != list:
             raise TypeError("Должен быть тип List")
 
@@ -251,24 +255,23 @@ class SqlLiteQrm:
         with sqlite3.connect(self.name_db) as connection:
             cursor = connection.cursor()
             cursor.executemany(
-                "INSERT INTO {nt} {name_arg} VALUES ({values})".format(nt=name_tables,
+                "INSERT INTO {nt} {name_arg} VALUES ({values})".format(nt=name_ListTables,
                                                                        name_arg=tuple(
-                                                                           self.header_table[name_tables].keys()),
+                                                                           self.header_table[name_ListTables].keys()),
                                                                        values=res), data)
 
-    def ExecuteManyDbDict(self, name_tables: str, data: List[Dict]):  # +
+    def ExecuteManyTableDict(self, name_ListTables: str, data: List[Dict]):  # +
 
         for dict_x in data:
             res: str = ', '.join('?' * len(dict_x))
-            ae = "INSERT INTO {nt} {name_arg} VALUES ({values})".format(nt=name_tables,
+            ae = "INSERT INTO {nt} {name_arg} VALUES ({values})".format(nt=name_ListTables,
                                                                         name_arg=tuple(dict_x.keys()),
                                                                         values=res)
             with sqlite3.connect(self.name_db) as connection:
                 cursor = connection.cursor()
                 cursor.execute(ae, tuple(dict_x.values()))
 
-    # Получения данных
-    def GetTable(self, name_tables: str) -> list:  # +
+    def GetTable(self, name_ListTables: str) -> list:  # +
         """
         Конвертация bytes в обьекта SQl BLOB и обратно
         a = Binary(b"101101")
@@ -277,35 +280,28 @@ class SqlLiteQrm:
         # Получить данные из таблицы
         with sqlite3.connect(self.name_db) as connection:
             cursor = connection.cursor()
-            cursor.execute('SELECT * FROM {0}'.format(name_tables))
+            cursor.execute('SELECT * FROM {0}'.format(name_ListTables))
             return cursor.fetchall()
 
-    def GetColumne(self, name_tables: str, name_column: str) -> list:  # +
+    def GetColumn(self, name_ListTables: str, name_column: str) -> list:  # +
         # Получить данные из столбца
         with sqlite3.connect(self.name_db) as connection:
             cursor = connection.cursor()
-            cursor.execute('SELECT {0} FROM {1}'.format(name_column, name_tables))
+            cursor.execute('SELECT {0} FROM {1}'.format(name_column, name_ListTables))
             return [x[0] for x in cursor.fetchall()]
 
-    def Tables(self) -> List[str]:  # +
-        with sqlite3.connect(self.name_db) as connection:
-            cursor = connection.cursor()
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
-            return [x[0] for x in cursor.fetchall() if x[0] != 'sqlite_sequence']
-
-    # Поиск в БД
-    def SearchTable(self, name_tables: str,
-                    name_column_search: Union[str, Tuple],
-                    sqlWHERE: str,
-                    sqlORDER_BY: str = "",
-                    sqlLIMIT: Union[int, Tuple[int, int]] = 0
-                    ) -> list:  # +
+    def SearchColumn(self, name_ListTables: str,
+                     name_column_search: Union[str, Tuple],
+                     sqlWHERE: str,
+                     sqlORDER_BY: str = "",
+                     sqlLIMIT: Union[int, Tuple[int, int]] = 0
+                     ) -> list:  # +
         """
-        :param name_tables: Название таблицы
+        :param name_ListTables: Название таблицы
         :param name_column_search: Название столбца котроый будет выбора
         :param sqlWHERE: Условие SQL полсе WHERE
         :param sqlORDER_BY: сортировка SQL полсе ORDER BY (- в начате означает обратный порядок DESC)
-        :param sqlLIMIT: Лимит поиска
+        :param sqlLIMIT: Лимит поиска (конец, шаг)
         :return: Список с найдеными столбцами name_column_search
         """
         """
@@ -318,7 +314,7 @@ class SqlLiteQrm:
         if type(name_column_search) == tuple:
             name_column_search = ', '.join(name_column_search)
 
-        request: str = 'SELECT {0} FROM {1} WHERE {2}'.format(name_column_search, name_tables, sqlWHERE)
+        request: str = 'SELECT {0} FROM {1} WHERE {2}'.format(name_column_search, name_ListTables, sqlWHERE)
 
         if sqlORDER_BY:
             if sqlORDER_BY[0] == '-':  # Сортировка  по убываниюы
@@ -339,6 +335,47 @@ class SqlLiteQrm:
             cursor.execute(request)
             return cursor.fetchall()
 
+    def UpdateColumne(self, name_ListTables: str,
+                      name_column: Union[str, List[str]],
+                      new_data: Union[str, bytes, int, float, List[Union[str, bytes, int, float]]],
+                      sqlWHERE: str = "",
+                      sqlLIKE: str = ""):
+        """
+        Обновлени данных в стобцах
+        :param name_ListTables: Название таблицы
+        :param name_column: Название столбца котроый будет выбора
+        :param new_data: Новое значение у столбцов
+        :param sqlWHERE: Условие SQL полсе WHERE
+        :param sqlLIKE: Шаблон SQL посе LIKE
+        """
+
+        request: str = "UPDATE {0} SET ".format(name_ListTables)
+        if type(name_column) == list and type(new_data) == list:  # Нескольк столбцов на измнение
+            if len(name_column) != len(new_data):
+                raise IndexError("name_column != new_data")
+
+            for n, d in zip(name_column, new_data):
+                if type(n) == str:
+                    request += "{0} = '{1}', ".format(n, d)
+                else:
+                    request += "{0} = {1}, ".format(n, d)
+            request = request[:-2:]
+        else:  # один столбцов на измнение
+            request += "{0} = {1}".format(name_column, new_data)
+
+        if sqlWHERE:
+            request += " WHERE {0}".format(sqlWHERE)
+        if sqlLIKE:
+            # % любое продолжение строк
+            # _ любой один симвл
+            request += " LIKE '{0}'".format(sqlLIKE)
+
+        with sqlite3.connect(self.name_db) as connection:
+            cursor = connection.cursor()
+            cursor.execute(request)
+
+    def DeleteColumne(self):
+        pass
 
 
 if __name__ == '__main__':
@@ -353,21 +390,14 @@ if __name__ == '__main__':
     sq.DeleteTable(name_table)
 
     sq.CreateTable(name_table, {"id": (int, SqlName.IDAUTO), "name": str, "old": int, "sex": (str, SqlName.NND())})
-    sq.ExecuteDb(name_table, {"name": "Denis", "old": 21})
-    sq.ExecuteDb(name_table, {"name": "Katy", "old": 221, "sex": 1})
-    sq.ExecuteDb(name_table, {"name": "Mush", "old": 321, "sex": 21})
-    sq.ExecuteDb(name_table, {"name": "Patio", "old": 231, "sex": 21})
-    sq.ExecuteDb(name_table, {"name": "Svetha", "old": 24})
+    sq.ExecuteTable(name_table, {"name": "Denis", "old": 21})
+    sq.ExecuteTable(name_table, {"name": "Katy", "old": 221, "sex": 1})
+    sq.ExecuteTable(name_table, {"name": "Mush", "old": 321, "sex": 21})
+    sq.ExecuteTable(name_table, {"name": "Patio", "old": 231, "sex": 21})
+    sq.ExecuteTable(name_table, {"name": "Pvetha", "old": 24})
     print(sq.GetTable(name_table))
 
-    print(sq.SearchTable(name_table, "name", "old == 21 and sex == 21"))  # И
-    print(sq.SearchTable(name_table, "name", "old BETWEEN 10 and 21"))  # В пределах
-    print(sq.SearchTable(name_table, "name", "old in (24,22)"))  # Содержиться В ()
-    print(sq.SearchTable(name_table, "name", "old == 21 or sex == 1"))  # ИЛИ
-    print(sq.SearchTable(name_table, "name", "old not in (21,24)"))  # Приставка НЕ
-
-    print(sq.SearchTable(name_table, "*", "old > 20", "id"))  # И
-    print(sq.SearchTable(name_table, "*", "old > 20", "id", 2))  # И
-    print(sq.SearchTable(name_table, "*", "old > 20", "id", (4, 2)))  # И
+    print(sq.UpdateColumne(name_table, ['old', 'sex'], [99, 88], "old > 21"))
+    print(sq.GetTable(name_table))
 
     print()
