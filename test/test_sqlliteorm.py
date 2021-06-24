@@ -219,80 +219,133 @@ class TestSqlLite(unittest.TestCase):
                                    {"name": "Svetha", "old": 24}]
                                   )
 
-        self.assertEqual(self.sq.SearchTable(self.name_table, "name", "old", "==", "21"), [('Denis',), ('Katy',)])
-        self.assertEqual(self.sq.SearchTable(self.name_table, ("name", "sex"), "old", "==", "21"),
+        self.assertEqual(self.sq.SearchTable(self.name_table, "name", "old == 21"), [('Denis',), ('Katy',)])
+        self.assertEqual(self.sq.SearchTable(self.name_table, ("name", "sex"), "old == 21"),
                          [('Denis', 'None'), ('Katy', '1')])
-        self.assertEqual(self.sq.SearchTable(self.name_table, "*", "old", "==", "21"),
+        self.assertEqual(self.sq.SearchTable(self.name_table, "*", "old == 21"),
                          [(1, 'Denis', 21, 'None'), (2, 'Katy', 21, '1')])
 
-        self.assertEqual(self.sq.SearchTable(self.name_table, "name", "old", "<=", "21"), [('Denis',), ('Katy',)])
-        self.assertEqual(self.sq.SearchTable(self.name_table, "name", "old", "<", "21"), [])
-        self.assertEqual(self.sq.SearchTable(self.name_table, "name", "old", ">", "21"), [('Svetha',)])
-        self.assertEqual(self.sq.SearchTable(self.name_table, "name", "old", ">=", "21"),
+        self.assertEqual(self.sq.SearchTable(self.name_table, "name", "old <= 21"), [('Denis',), ('Katy',)])
+        self.assertEqual(self.sq.SearchTable(self.name_table, "name", "old < 21"), [])
+        self.assertEqual(self.sq.SearchTable(self.name_table, "name", "old > 21"), [('Svetha',)])
+        self.assertEqual(self.sq.SearchTable(self.name_table, "name", "old >= 21"),
                          [('Denis',), ('Katy',), ('Svetha',)])
 
-        # Провекра неправильных парамтров condition
-        self.assertRaises(ValueError, self.sq.SearchTable, self.name_table, "name", "old", "===", "21")
+        self.sq.DeleteTable(self.name_table)
 
-    def test_ExecuteManyDbDict(self):
-        # Проверка записи ExecuteManyDbDict
+        # Двойное условие SearchTable
         self.sq.CreateTable(self.name_table,
                             {"id": (int, SqlName.IDAUTO), "name": str, "old": int, "sex": (str, SqlName.NND())})
-        self.sq.ExecuteManyDbDict(self.name_table,
-                                  [{"name": "Denis", "old": 21},
-                                   {"name": "Katy", "old": 21, "sex": 1},
-                                   {"name": "Svetha", "old": 24}]
-                                  )
-        self.assertEqual(self.sq.GetTable(self.name_table),
-                         [(1, 'Denis', 21, 'None'), (2, 'Katy', 21, '1'), (3, 'Svetha', 24, 'None')])
+        self.sq.ExecuteManyDbDict(self.name_table, [{"name": "Denis", "old": 21},
+                                                    {"name": "Katy", "old": 21, "sex": 1},
+                                                    {"name": "Mush", "old": 21, "sex": 21},
+                                                    {"name": "Patio", "old": 21, "sex": 21},
+                                                    {"name": "Svetha", "old": 24}])
 
-    def test_Tables_and___update_header_table(self):
-        # Проверка получения списка таблиц
-        test_header = {"id": (int, SqlName.PK),
-                       "name": (str),
-                       "old": (int, SqlName.NND(5)),
-                       "salary": (float, SqlName.NN)}
-        self.sq.CreateTable(self.name_table, test_header)
+        self.assertEqual(self.sq.SearchTable(self.name_table, "name", "old == 21 and sex == 21"),
+                         [('Mush',), ('Patio',)])  # И
+        self.assertEqual(self.sq.SearchTable(self.name_table, "name", "old BETWEEN 10 and 21"),
+                         [('Denis',), ('Katy',), ('Mush',), ('Patio',)])  # В пределах
+        self.assertEqual(self.sq.SearchTable(self.name_table, "name", "old in (24,22)"),
+                         [('Svetha',)])  # Содержиться В ()
+        self.assertEqual(self.sq.SearchTable(self.name_table, "name", "old == 21 or sex == 1"),
+                         [('Denis',), ('Katy',), ('Mush',), ('Patio',)])  # ИЛИ
+        self.assertEqual(self.sq.SearchTable(self.name_table, "name", "old not in (21,24)"), [])  # Приставка НЕ
+        self.sq.DeleteTable(self.name_table)
 
-        test_header = {"id": (int, SqlName.PK),
-                       "film": (str),
-                       "old": (int),
-                       "salary": (float)}
-        self.sq.CreateTable(self.name_table, test_header)
-        self.sq.CreateTable("test1", test_header)
-
-        test_header = {"id": (int, SqlName.PK),
-                       "name": (str),
-                       "hapy": (int, SqlName.NND(52)),
-                       "salary": (float)}
-        self.sq.CreateTable(self.name_table, test_header)
-        self.sq.CreateTable("test2", test_header)
-
-        self.assertEqual(self.sq.Tables(), ['stocks', 'test1', 'test2'])
-
-        # Проверка __update_header_table для новой таблицы
-        sq = SqlLiteQrm(self.name_db)
-        self.assertEqual(sq.Tables(), ['stocks', 'test1', 'test2'])
-        self.assertEqual(sq.header_table['test1'], {"id": (int, SqlName.PK),
-                                                    "film": (str, ''),
-                                                    "old": (int, ''),
-                                                    "salary": (float, '')})
-
-    def test_GetColumne(self):
-        # Проверка получения столбца
+        # Сортировка ORDER BY
         self.sq.CreateTable(self.name_table,
                             {"id": (int, SqlName.IDAUTO), "name": str, "old": int, "sex": (str, SqlName.NND())})
-        self.sq.ExecuteManyDbDict(self.name_table,
-                                  [{"name": "Denis", "old": 21},
-                                   {"name": "Katy", "old": 21, "sex": 1},
-                                   {"name": "Svetha", "old": 24}]
-                                  )
+        self.sq.ExecuteManyDbDict(self.name_table, [{"name": "Denis", "old": 21},
+                                                    {"name": "Katy", "old": 221, "sex": 1},
+                                                    {"name": "Mush", "old": 321, "sex": 21},
+                                                    {"name": "Patio", "old": 231, "sex": 21},
+                                                    {"name": "Svetha", "old": 24}])
+        self.assertEqual(self.sq.SearchTable(self.name_table, "*", "old > 20", "old"),
+                         [(1, 'Denis', 21, 'None'),
+                          (5, 'Svetha', 24, 'None'),
+                          (2, 'Katy', 221, '1'),
+                          (4, 'Patio', 231, '21'),
+                          (3, 'Mush', 321, '21')])
 
-        self.assertEqual(self.sq.GetColumne(self.name_table, "name"), ['Denis', 'Katy', 'Svetha'])
-        self.assertEqual(self.sq.GetColumne(self.name_table, "old"), [21, 21, 24])
+        # Сортировка ORDER BY ___ [DESC,ASC]
+        self.assertEqual(self.sq.SearchTable(self.name_table, "*", "old > 20", "id"),
+                         [(1, 'Denis', 21, 'None'), (2, 'Katy', 221, '1'), (3, 'Mush', 321, '21'),
+                          (4, 'Patio', 231, '21'), (5, 'Svetha', 24, 'None')])
+        self.assertEqual(self.sq.SearchTable(self.name_table, "*", "old > 20", "-id"),
+                         [(5, 'Svetha', 24, 'None'), (4, 'Patio', 231, '21'), (3, 'Mush', 321, '21'),
+                          (2, 'Katy', 221, '1'), (1, 'Denis', 21, 'None')])
 
-    def __del__(self):
-        self.sq.DeleteDb()
+        # LIMIT
+        self.assertEqual(self.sq.SearchTable(self.name_table, "*", "old > 20", "id", 2),
+                         [(1, 'Denis', 21, 'None'), (2, 'Katy', 221, '1')])  # До 2
+        self.assertEqual(self.sq.SearchTable(self.name_table, "*", "old > 20", "id", (4, 2)),
+                         [(3, 'Mush', 321, '21'), (4, 'Patio', 231, '21'),
+                          (5, 'Svetha', 24, 'None')])  # До 4 с интервалам 2
+
+
+def test_ExecuteManyDbDict(self):
+    # Проверка записи ExecuteManyDbDict
+    self.sq.CreateTable(self.name_table,
+                        {"id": (int, SqlName.IDAUTO), "name": str, "old": int, "sex": (str, SqlName.NND())})
+    self.sq.ExecuteManyDbDict(self.name_table,
+                              [{"name": "Denis", "old": 21},
+                               {"name": "Katy", "old": 21, "sex": 1},
+                               {"name": "Svetha", "old": 24}]
+                              )
+    self.assertEqual(self.sq.GetTable(self.name_table),
+                     [(1, 'Denis', 21, 'None'), (2, 'Katy', 21, '1'), (3, 'Svetha', 24, 'None')])
+
+
+def test_Tables_and___update_header_table(self):
+    # Проверка получения списка таблиц
+    test_header = {"id": (int, SqlName.PK),
+                   "name": (str),
+                   "old": (int, SqlName.NND(5)),
+                   "salary": (float, SqlName.NN)}
+    self.sq.CreateTable(self.name_table, test_header)
+
+    test_header = {"id": (int, SqlName.PK),
+                   "film": (str),
+                   "old": (int),
+                   "salary": (float)}
+    self.sq.CreateTable(self.name_table, test_header)
+    self.sq.CreateTable("test1", test_header)
+
+    test_header = {"id": (int, SqlName.PK),
+                   "name": (str),
+                   "happy": (int, SqlName.NND(52)),
+                   "salary": (float)}
+    self.sq.CreateTable(self.name_table, test_header)
+    self.sq.CreateTable("test2", test_header)
+
+    self.assertEqual(self.sq.Tables(), ['stocks', 'test1', 'test2'])
+
+    # Проверка __update_header_table для новой таблицы
+    sq = SqlLiteQrm(self.name_db)
+    self.assertEqual(sq.Tables(), ['stocks', 'test1', 'test2'])
+    self.assertEqual(sq.header_table['test1'], {"id": (int, SqlName.PK),
+                                                "film": (str, ''),
+                                                "old": (int, ''),
+                                                "salary": (float, '')})
+
+
+def test_GetColumne(self):
+    # Проверка получения столбца
+    self.sq.CreateTable(self.name_table,
+                        {"id": (int, SqlName.IDAUTO), "name": str, "old": int, "sex": (str, SqlName.NND())})
+    self.sq.ExecuteManyDbDict(self.name_table,
+                              [{"name": "Denis", "old": 21},
+                               {"name": "Katy", "old": 21, "sex": 1},
+                               {"name": "Svetha", "old": 24}]
+                              )
+
+    self.assertEqual(self.sq.GetColumne(self.name_table, "name"), ['Denis', 'Katy', 'Svetha'])
+    self.assertEqual(self.sq.GetColumne(self.name_table, "old"), [21, 21, 24])
+
+
+def __del__(self):
+    self.sq.DeleteDb()
 
 
 if __name__ == '__main__':

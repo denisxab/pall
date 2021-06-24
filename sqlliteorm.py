@@ -106,18 +106,13 @@ def toSqlRequest(data: Dict[str, Union[tuple, str]]) -> str:
     return res
 
 
+# https://www.youtube.com/watch?v=Vj5n2TGq00o&list=PLA0M1Bcd0w8x4Inr5oYttMK6J47vxgv6J&index=4
 class SqlLiteQrm:
     """
     - Запись данных в БД
     - Чтение данных Из БД
-
-    NULL — значение NULL
-    INTEGER — числовые значения. Целые числа хранятся в 1, 2, 3, 4, 6 и 8 байтах в зависимости от величины
-    REAL — числа с плавающей точкой, например, 3.14, число Пи
-    TEXT — текстовые значения. Могут храниться в кодировке UTF-8, UTF-16BE или UTF-16LE
-    BLOB — бинарные данные. Для хранения изображений и файлов
-
     """
+
 
     def __init__(self, name_dbf: str) -> None:  # +
         self.connection = None
@@ -299,65 +294,80 @@ class SqlLiteQrm:
             return [x[0] for x in cursor.fetchall() if x[0] != 'sqlite_sequence']
 
     # Поиск в БД
-    def SearchTable(self, name_tables: str, name_column_search: Union[str, Tuple],
-                    name_column_condition: Union[str, Tuple],
-                    condition: str,
-                    questions: str) -> list:  # +
+    def SearchTable(self, name_tables: str,
+                    name_column_search: Union[str, Tuple],
+                    sqlWHERE: str,
+                    sqlORDER_BY: str = "",
+                    sqlLIMIT: Union[int, Tuple[int, int]] = 0
+                    ) -> list:  # +
         """
         :param name_tables: Название таблицы
         :param name_column_search: Название столбца котроый будет выбора
-        :param name_column_condition: Название столбца для поиска
-        :param condition: Условие поиска ["==", "<=", ">=", "!=", ">", "<"]
-        :param questions: Значение по которому искать
+        :param sqlWHERE: Условие SQL полсе WHERE
+        :param sqlORDER_BY: сортировка SQL полсе ORDER BY (- в начате означает обратный порядок DESC)
+        :param sqlLIMIT: Лимит поиска
         :return: Список с найдеными столбцами name_column_search
         """
-        if condition not in ["==", "<=", ">=", "!=", ">", "<"]:
-            raise ValueError("Неврено указанн condition :{0}".format(condition))
-
+        """
+        Получение данных из курсора
+        cursor.fetchone() - получить только первую запись
+        cursor.fetchmany() - получить только до указаонного колличества
+        cursor.fetchall() - получить все записи
+        for x in cursor - переберать по одному элементу(данные в виде итератора)      
+        """
         if type(name_column_search) == tuple:
             name_column_search = ', '.join(name_column_search)
 
-        if type(name_column_condition) == tuple:
-            name_column_condition = ', '.join(name_column_condition)
+        request: str = 'SELECT {0} FROM {1} WHERE {2}'.format(name_column_search, name_tables, sqlWHERE)
+
+        if sqlORDER_BY:
+            if sqlORDER_BY[0] == '-':  # Сортировка  по убываниюы
+                request += " ORDER BY {0} DESC".format(sqlORDER_BY[1::])
+
+            else:  # Сортировка по возрастанию
+                request += ' ORDER BY {0} ASC'.format(sqlORDER_BY)
+
+        if sqlLIMIT:
+
+            if type(sqlLIMIT) == tuple:
+                request += " LIMIT {0} OFFSET {1}".format(sqlLIMIT[0], sqlLIMIT[1])
+            else:
+                request += " LIMIT {0}".format(sqlLIMIT)
 
         with sqlite3.connect(self.name_db) as connection:
             cursor = connection.cursor()
-            cursor.execute(
-                'SELECT {name_column_search} FROM {name_tables} WHERE {name_column_condition} {condition} {questions}'.format(
-                    name_column_search=name_column_search, name_column_condition=name_column_condition,
-                    condition=condition,
-                    name_tables=name_tables, questions=questions))
-
+            cursor.execute(request)
             return cursor.fetchall()
 
 
+
 if __name__ == '__main__':
+    """
+    
+    
+    """
+
     name_db = 'example.db'
     name_table = "stocks"
     sq = SqlLiteQrm(name_db)
     sq.DeleteTable(name_table)
 
     sq.CreateTable(name_table, {"id": (int, SqlName.IDAUTO), "name": str, "old": int, "sex": (str, SqlName.NND())})
-
-    print(sq.Tables())
-
-    print(sq.header_table)
-    print(toSqlRequest(sq.header_table))
-
     sq.ExecuteDb(name_table, {"name": "Denis", "old": 21})
-    sq.ExecuteDb(name_table, {"name": "Katy", "old": 21, "sex": 1})
-
-    sq.ExecuteDb(name_table, {"name": "Mush", "old": 21, "sex": 21})
-    sq.ExecuteDb(name_table, {"name": "Patio", "old": 21, "sex": 21})
-
+    sq.ExecuteDb(name_table, {"name": "Katy", "old": 221, "sex": 1})
+    sq.ExecuteDb(name_table, {"name": "Mush", "old": 321, "sex": 21})
+    sq.ExecuteDb(name_table, {"name": "Patio", "old": 231, "sex": 21})
     sq.ExecuteDb(name_table, {"name": "Svetha", "old": 24})
     print(sq.GetTable(name_table))
 
-    print(sq.GetColumne(name_table, "name"))
+    print(sq.SearchTable(name_table, "name", "old == 21 and sex == 21"))  # И
+    print(sq.SearchTable(name_table, "name", "old BETWEEN 10 and 21"))  # В пределах
+    print(sq.SearchTable(name_table, "name", "old in (24,22)"))  # Содержиться В ()
+    print(sq.SearchTable(name_table, "name", "old == 21 or sex == 1"))  # ИЛИ
+    print(sq.SearchTable(name_table, "name", "old not in (21,24)"))  # Приставка НЕ
 
-    print(sq.SearchTable(name_table, "name", "old", "==", "21"))
-    print(sq.SearchTable(name_table, ("name", "sex"), "old", "==", "21"))
-    print(sq.SearchTable(name_table, "*", "old", "==", "21"))
+    print(sq.SearchTable(name_table, "*", "old > 20", "id"))  # И
+    print(sq.SearchTable(name_table, "*", "old > 20", "id", 2))  # И
+    print(sq.SearchTable(name_table, "*", "old > 20", "id", (4, 2)))  # И
 
     print()
-    print(sq.SearchTable(name_table, "name", ("old", "sex"), "==", "21"))
