@@ -3,7 +3,7 @@ from os import path, listdir
 from os.path import getsize
 from sqlite3 import OperationalError
 
-from sqlliteorm import SqlLite, SqlName
+from sqlliteorm import SqlLiteQrm, SqlName
 
 
 class TestSqlLite(unittest.TestCase):
@@ -11,14 +11,14 @@ class TestSqlLite(unittest.TestCase):
     def setUp(self) -> None:
         self.name_db = "test.db"
         self.name_table = "stocks"
-        self.sq = SqlLite(self.name_db)
+        self.sq = SqlLiteQrm(self.name_db)
         self.sq.DeleteTable(self.name_table)
 
     def test_error_name(self):
         # Проверка на неправильные имена базы данных
-        self.assertRaises(NameError, SqlLite, 'example.txt')
-        self.assertRaises(NameError, SqlLite, 'example')
-        self.assertRaises(NameError, SqlLite, 'ex.am.pl.et')
+        self.assertRaises(NameError, SqlLiteQrm, 'example.txt')
+        self.assertRaises(NameError, SqlLiteQrm, 'example')
+        self.assertRaises(NameError, SqlLiteQrm, 'ex.am.pl.et')
 
     def test_ExecuteDb_dict(self):
         # Провекра дополнительынх параметоров к созданию таблицы
@@ -28,19 +28,28 @@ class TestSqlLite(unittest.TestCase):
                        "old": (int, SqlName.NND(5)),
                        "salary": (float, SqlName.NN)}
         self.sq.CreateTable(self.name_table, test_header)
-        self.assertEqual(self.sq.header_db, test_header)
+
+        for k, v in test_header.items():
+            test_header[k] = (v, "") if type(v) != tuple else v
+
+        self.assertEqual(self.sq.header_table[self.name_table], test_header)
         self.sq.ExecuteDb(self.name_table, {"id": 1, "name": "Anton", "old": 30, "salary": 3000.11})
         self.sq.ExecuteDb(self.name_table, {"id": 2, "name": "Katy", "old": 22, "salary": 3200.23})
-        self.assertEqual(self.sq.GetTable(self.name_table), [(1, 'Anton', 30, 3000.11), (2, 'Katy', 22, 3200.23)])
+        self.assertEqual(self.sq.GetTable(self.name_table), [(1, 'Anton', 30, 3000.11),
+                                                             (2, 'Katy', 22, 3200.23)])
         self.sq.DeleteTable(self.name_table)
 
         # Проверка записи с AUTOINCREMENT
         test_header = {"id": (int, SqlName.IDAUTO),
-                       "name": str,
+                       "name": (str, ""),
                        "old": (int, SqlName.NND(5)),
                        "salary": (float, SqlName.NN)}
+
+        for k, v in test_header.items():
+            test_header[k] = (v, "") if type(v) != tuple else v
+
         self.sq.CreateTable(self.name_table, test_header)
-        self.assertEqual(self.sq.header_db, test_header)
+        self.assertEqual(self.sq.header_table[self.name_table], test_header)
         self.sq.ExecuteDb(self.name_table, {"name": "Anton", "old": 30, "salary": 3000.33})
         self.sq.ExecuteDb(self.name_table, {"name": "Katy", "old": 22, "salary": 3200.54})
         self.assertEqual(self.sq.GetTable(self.name_table), [(1, 'Anton', 30, 3000.33), (2, 'Katy', 22, 3200.54)])
@@ -78,12 +87,32 @@ class TestSqlLite(unittest.TestCase):
         # Првоерка создания таблицы
         test_header = {"date": str, "trans": str, "symbol": str, "qty": float, "price": float}
         self.sq.CreateTable(self.name_table, test_header)
-        self.assertEqual(self.sq.header_db, test_header)
+
+        for k, v in test_header.items():
+            test_header[k] = (v, "") if type(v) != tuple else v
+
+        self.assertEqual(self.sq.header_table[self.name_table], test_header)
         self.sq.DeleteTable(self.name_table)
 
-        # Если изменить test_header то нужно переписать test_header на sql запрос
-        self.sq.CreateTable(self.name_table, "(date text, trans text, symbol text, qty real, price real)")
-        self.assertEqual(self.sq.header_db, test_header)
+        # Тест записи заголовка в виде SQL запроса
+        self.sq.CreateTable(self.name_table, "(date TEXT, trans TEXT, symbol TEXT, qty REAL, price INTEGER)")
+        self.assertEqual(self.sq.header_table[self.name_table],
+                         {'date': (str, ''),
+                          'trans': (str, ''),
+                          'symbol': (str, ''),
+                          'qty': (float, ''),
+                          'price': (int, '')})
+
+        self.sq.DeleteTable(self.name_table)
+
+        # С доп параметрами
+        self.sq.CreateTable(self.name_table, "(date TEXT, trans TEXT, symbol TEXT, qty REAL PRIMARY KEY, price REAL)")
+        self.assertEqual(self.sq.header_table[self.name_table], {
+            'date': (str, ''), 'trans': (str, ''),
+            'symbol': (str, ''), 'qty': (float, "PRIMARY KEY"),
+            'price': (float, '')
+        })
+
         self.sq.DeleteTable(self.name_table)
 
     def test_error_CreateTable(self):
@@ -122,13 +151,13 @@ class TestSqlLite(unittest.TestCase):
         test_header = {"str": str, "int": int, "float": float, "bytes": bytes}
         test_data = ("text", 123, 122.32, b"1011")
         self.sq.CreateTable(self.name_table, test_header)
-        self.assertEqual(self.sq.header_db, test_header)
+        self.assertEqual(self.sq.header_table[self.name_table], test_header)
         self.sq.ExecuteDb(self.name_table, test_data)
         self.assertEqual(self.sq.GetTable(self.name_table)[0], test_data)
         self.sq.DeleteTable(self.name_table)
         # List
         self.sq.CreateTable(self.name_table, test_header)
-        self.assertEqual(self.sq.header_db, test_header)
+        self.assertEqual(self.sq.header_table[self.name_table], test_header)
         self.sq.ExecuteDb(self.name_table, list(test_data))
         self.assertEqual(self.sq.GetTable(self.name_table)[0], test_data)
         self.sq.DeleteTable(self.name_table)
@@ -137,7 +166,12 @@ class TestSqlLite(unittest.TestCase):
         test_header = {"str": str, "int": int, "float": float, "bytes": bytes}
         test_data = "('text', '123', '122.32', '{0}')".format(b"0101")
         self.sq.CreateTable(self.name_table, "(str TEXT, int INTEGER, float REAL, bytes BLOB)")
-        self.assertEqual(self.sq.header_db, test_header)
+
+        for k, v in test_header.items():
+            test_header[k] = (v, "") if type(v) != tuple else v
+
+        self.assertEqual(self.sq.header_table[self.name_table], test_header)
+
         self.assertRaises(TypeError, self.sq.ExecuteDb, (self.name_table, test_data))
         self.sq.DeleteTable(self.name_table)
 
@@ -174,6 +208,88 @@ class TestSqlLite(unittest.TestCase):
                 self.sq.ExecuteDb(self.name_table, (nf, getsize(nf)))
         self.assertEqual(self.sq.GetTable(self.name_table), [(nf, getsize(nf)) for nf in listdir(".") if
                                                              len(nf.split(".")) == 2 and nf.split(".")[1] == "py"])
+
+    def test_SearchTable(self):
+        # Проверка алгоритма поиска в таблицы
+        self.sq.CreateTable(self.name_table,
+                            {"id": (int, SqlName.IDAUTO), "name": str, "old": int, "sex": (str, SqlName.NND())})
+        self.sq.ExecuteManyDbDict(self.name_table,
+                                  [{"name": "Denis", "old": 21},
+                                   {"name": "Katy", "old": 21, "sex": 1},
+                                   {"name": "Svetha", "old": 24}]
+                                  )
+
+        self.assertEqual(self.sq.SearchTable(self.name_table, "name", "old", "==", "21"), [('Denis',), ('Katy',)])
+        self.assertEqual(self.sq.SearchTable(self.name_table, ("name", "sex"), "old", "==", "21"),
+                         [('Denis', 'None'), ('Katy', '1')])
+        self.assertEqual(self.sq.SearchTable(self.name_table, "*", "old", "==", "21"),
+                         [(1, 'Denis', 21, 'None'), (2, 'Katy', 21, '1')])
+
+        self.assertEqual(self.sq.SearchTable(self.name_table, "name", "old", "<=", "21"), [('Denis',), ('Katy',)])
+        self.assertEqual(self.sq.SearchTable(self.name_table, "name", "old", "<", "21"), [])
+        self.assertEqual(self.sq.SearchTable(self.name_table, "name", "old", ">", "21"), [('Svetha',)])
+        self.assertEqual(self.sq.SearchTable(self.name_table, "name", "old", ">=", "21"),
+                         [('Denis',), ('Katy',), ('Svetha',)])
+
+        # Провекра неправильных парамтров condition
+        self.assertRaises(ValueError, self.sq.SearchTable, self.name_table, "name", "old", "===", "21")
+
+    def test_ExecuteManyDbDict(self):
+        # Проверка записи ExecuteManyDbDict
+        self.sq.CreateTable(self.name_table,
+                            {"id": (int, SqlName.IDAUTO), "name": str, "old": int, "sex": (str, SqlName.NND())})
+        self.sq.ExecuteManyDbDict(self.name_table,
+                                  [{"name": "Denis", "old": 21},
+                                   {"name": "Katy", "old": 21, "sex": 1},
+                                   {"name": "Svetha", "old": 24}]
+                                  )
+        self.assertEqual(self.sq.GetTable(self.name_table),
+                         [(1, 'Denis', 21, 'None'), (2, 'Katy', 21, '1'), (3, 'Svetha', 24, 'None')])
+
+    def test_Tables_and___update_header_table(self):
+        # Проверка получения списка таблиц
+        test_header = {"id": (int, SqlName.PK),
+                       "name": (str),
+                       "old": (int, SqlName.NND(5)),
+                       "salary": (float, SqlName.NN)}
+        self.sq.CreateTable(self.name_table, test_header)
+
+        test_header = {"id": (int, SqlName.PK),
+                       "film": (str),
+                       "old": (int),
+                       "salary": (float)}
+        self.sq.CreateTable(self.name_table, test_header)
+        self.sq.CreateTable("test1", test_header)
+
+        test_header = {"id": (int, SqlName.PK),
+                       "name": (str),
+                       "hapy": (int, SqlName.NND(52)),
+                       "salary": (float)}
+        self.sq.CreateTable(self.name_table, test_header)
+        self.sq.CreateTable("test2", test_header)
+
+        self.assertEqual(self.sq.Tables(), ['stocks', 'test1', 'test2'])
+
+        # Проверка __update_header_table для новой таблицы
+        sq = SqlLiteQrm(self.name_db)
+        self.assertEqual(sq.Tables(), ['stocks', 'test1', 'test2'])
+        self.assertEqual(sq.header_table['test1'], {"id": (int, SqlName.PK),
+                                                    "film": (str, ''),
+                                                    "old": (int, ''),
+                                                    "salary": (float, '')})
+
+    def test_GetColumne(self):
+        # Проверка получения столбца
+        self.sq.CreateTable(self.name_table,
+                            {"id": (int, SqlName.IDAUTO), "name": str, "old": int, "sex": (str, SqlName.NND())})
+        self.sq.ExecuteManyDbDict(self.name_table,
+                                  [{"name": "Denis", "old": 21},
+                                   {"name": "Katy", "old": 21, "sex": 1},
+                                   {"name": "Svetha", "old": 24}]
+                                  )
+
+        self.assertEqual(self.sq.GetColumne(self.name_table, "name"), ['Denis', 'Katy', 'Svetha'])
+        self.assertEqual(self.sq.GetColumne(self.name_table, "old"), [21, 21, 24])
 
     def __del__(self):
         self.sq.DeleteDb()
