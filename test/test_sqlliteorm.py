@@ -3,7 +3,7 @@ from os import path, listdir
 from os.path import getsize
 from sqlite3 import OperationalError
 
-from sqlliteorm import SqlLiteQrm, SqlName
+from sqlliteorm import SqlLiteQrm, sqn
 
 
 class TestSqlLite(unittest.TestCase):
@@ -23,10 +23,10 @@ class TestSqlLite(unittest.TestCase):
     def test_ExecuteTable_dict(self):
         # Провекра дополнительынх параметоров к созданию таблицы
         # Провекра записи через dict имен
-        test_header = {"id": (int, SqlName.PK),
+        test_header = {"id": (int, sqn.PK),
                        "name": str,
-                       "old": (int, SqlName.NND(5)),
-                       "salary": (float, SqlName.NN)}
+                       "old": (int, sqn.NND(5)),
+                       "salary": (float, sqn.NN)}
         self.sq.CreateTable(self.name_table, test_header)
 
         for k, v in test_header.items():
@@ -40,10 +40,10 @@ class TestSqlLite(unittest.TestCase):
         self.sq.DeleteTable(self.name_table)
 
         # Проверка записи с AUTOINCREMENT
-        test_header = {"id": (int, SqlName.IDAUTO),
+        test_header = {"id": (int, sqn.IDAUTO),
                        "name": (str, ""),
-                       "old": (int, SqlName.NND(5)),
-                       "salary": (float, SqlName.NN)}
+                       "old": (int, sqn.NND(5)),
+                       "salary": (float, sqn.NN)}
 
         for k, v in test_header.items():
             test_header[k] = (v, "") if type(v) != tuple else v
@@ -56,10 +56,10 @@ class TestSqlLite(unittest.TestCase):
         self.sq.DeleteTable(self.name_table)
 
         # Проверка на неправильное имя столбца в передаче параметров dict
-        test_header = {"id": (int, SqlName.PK),
+        test_header = {"id": (int, sqn.PK),
                        "name": str,
-                       "old": (int, SqlName.NND(5)),
-                       "salary": (float, SqlName.NN)}
+                       "old": (int, sqn.NND(5)),
+                       "salary": (float, sqn.NN)}
         self.sq.CreateTable(self.name_table, test_header)
         self.assertRaises(IndexError, self.sq.ExecuteTable, self.name_table,
                           {"id": 1, "ERORRRRRRRRR": "Anton", "ol222d": 30, "salary": 3000})
@@ -69,10 +69,10 @@ class TestSqlLite(unittest.TestCase):
 
     def test_ExecuteManyTable(self):
         # Проверека запси list в Бд
-        test_header = {"id": (int, SqlName.PK),
+        test_header = {"id": (int, sqn.PK),
                        "name": str,
-                       "old": (int, SqlName.NND(5)),
-                       "salary": (float, SqlName.NN)}
+                       "old": (int, sqn.NND(5)),
+                       "salary": (float, sqn.NN)}
         test_data_list = [
             (1, "Denis", 13, 23232.1223),
             (2, "Enis", 123, 5656.123),
@@ -123,11 +123,11 @@ class TestSqlLite(unittest.TestCase):
         self.assertRaises(TypeError, self.sq.CreateTable, self.name_table,
                           "(date text, trans text, symbol int, qty real, price real)")
         # Провекра Двойного создания Primary Key
-        test_header = {"id": (int, SqlName.IDAUTO),
-                       "url": (int, SqlName.PK),
+        test_header = {"id": (int, sqn.IDAUTO),
+                       "url": (int, sqn.PK),
                        "name": str,
-                       "old": (int, SqlName.NND(5)),
-                       "salary": (float, SqlName.NN)}
+                       "old": (int, sqn.NND(5)),
+                       "salary": (float, sqn.NN)}
         self.assertRaises(LookupError, self.sq.CreateTable, self.name_table, test_header)
 
     def test_ExecuteTable_and_GetTable(self):
@@ -212,7 +212,7 @@ class TestSqlLite(unittest.TestCase):
     def test_SearchColumn(self):
         # Проверка алгоритма поиска в таблицы
         self.sq.CreateTable(self.name_table,
-                            {"id": (int, SqlName.IDAUTO), "name": str, "old": int, "sex": (str, SqlName.NND())})
+                            {"id": (int, sqn.IDAUTO), "name": str, "old": int, "sex": (str, sqn.NND())})
         self.sq.ExecuteManyTableDict(self.name_table,
                                      [{"name": "Denis", "old": 21},
                                       {"name": "Katy", "old": 21, "sex": 1},
@@ -220,7 +220,7 @@ class TestSqlLite(unittest.TestCase):
                                      )
 
         self.assertEqual(self.sq.SearchColumn(self.name_table, "name", sqlWHERE="old == 21"), [('Denis',), ('Katy',)])
-        self.assertEqual(self.sq.SearchColumn(self.name_table, ("name", "sex"), sqlWHERE="old == 21"),
+        self.assertEqual(self.sq.SearchColumn(self.name_table, sqn.select("name", "sex"), sqlWHERE="old == 21"),
                          [('Denis', 'None'), ('Katy', '1')])
         self.assertEqual(self.sq.SearchColumn(self.name_table, "*", sqlWHERE="old == 21"),
                          [(1, 'Denis', 21, 'None'), (2, 'Katy', 21, '1')])
@@ -235,7 +235,7 @@ class TestSqlLite(unittest.TestCase):
 
         # Двойное условие SearchColumn
         self.sq.CreateTable(self.name_table,
-                            {"id": (int, SqlName.IDAUTO), "name": str, "old": int, "sex": (str, SqlName.NND())})
+                            {"id": (int, sqn.IDAUTO), "name": str, "old": int, "sex": (str, sqn.NND())})
         self.sq.ExecuteManyTableDict(self.name_table, [{"name": "Denis", "old": 21},
                                                        {"name": "Katy", "old": 21, "sex": 1},
                                                        {"name": "Mush", "old": 21, "sex": 21},
@@ -256,34 +256,43 @@ class TestSqlLite(unittest.TestCase):
 
         # Сортировка ORDER BY
         self.sq.CreateTable(self.name_table,
-                            {"id": (int, SqlName.IDAUTO), "name": str, "old": int, "sex": (str, SqlName.NND())})
+                            {"id": (int, sqn.IDAUTO), "name": str, "old": int, "sex": (str, sqn.NND())})
         self.sq.ExecuteManyTableDict(self.name_table, [{"name": "Denis", "old": 21},
                                                        {"name": "Katy", "old": 221, "sex": 1},
                                                        {"name": "Mush", "old": 321, "sex": 21},
                                                        {"name": "Patio", "old": 231, "sex": 21},
                                                        {"name": "Svetha", "old": 24}])
-        self.assertEqual(self.sq.SearchColumn(self.name_table, "*", sqlWHERE="old > 20", sqlORDER_BY="old"),
-                         [(1, 'Denis', 21, 'None'),
-                          (5, 'Svetha', 24, 'None'),
-                          (2, 'Katy', 221, '1'),
-                          (4, 'Patio', 231, '21'),
-                          (3, 'Mush', 321, '21')])
+        self.assertEqual(
+            self.sq.SearchColumn(self.name_table, "*", sqlWHERE="old > 20", sqlORDER_BY=sqn.order_by("old")),
+            [(1, 'Denis', 21, 'None'),
+             (5, 'Svetha', 24, 'None'),
+             (2, 'Katy', 221, '1'),
+             (4, 'Patio', 231, '21'),
+             (3, 'Mush', 321, '21')])
 
         # Сортировка ORDER BY ___ [DESC,ASC]
-        self.assertEqual(self.sq.SearchColumn(self.name_table, "*", sqlWHERE="old > 20", sqlORDER_BY="id"),
-                         [(1, 'Denis', 21, 'None'), (2, 'Katy', 221, '1'), (3, 'Mush', 321, '21'),
-                          (4, 'Patio', 231, '21'), (5, 'Svetha', 24, 'None')])
-        self.assertEqual(self.sq.SearchColumn(self.name_table, "*", sqlWHERE="old > 20", sqlORDER_BY="-id"),
-                         [(5, 'Svetha', 24, 'None'), (4, 'Patio', 231, '21'), (3, 'Mush', 321, '21'),
-                          (2, 'Katy', 221, '1'), (1, 'Denis', 21, 'None')])
+        self.assertEqual(
+            self.sq.SearchColumn(self.name_table, "*", sqlWHERE="old > 20", sqlORDER_BY=sqn.order_by("id")),
+            [(1, 'Denis', 21, 'None'), (2, 'Katy', 221, '1'), (3, 'Mush', 321, '21'),
+             (4, 'Patio', 231, '21'), (5, 'Svetha', 24, 'None')])
+        self.assertEqual(
+            self.sq.SearchColumn(self.name_table, "*", sqlWHERE="old > 20", sqlORDER_BY=sqn.order_by("-id")),
+            [(5, 'Svetha', 24, 'None'), (4, 'Patio', 231, '21'), (3, 'Mush', 321, '21'),
+             (2, 'Katy', 221, '1'), (1, 'Denis', 21, 'None')])
 
         # LIMIT
-        self.assertEqual(self.sq.SearchColumn(self.name_table, "*", sqlWHERE="old > 20", sqlORDER_BY="id", sqlLIMIT=2),
+        self.assertEqual(self.sq.SearchColumn(self.name_table, "*", sqlWHERE="old > 20", sqlORDER_BY=sqn.order_by("id"),
+                                              sqlLIMIT=sqn.limit(2)),
                          [(1, 'Denis', 21, 'None'), (2, 'Katy', 221, '1')])  # До 2
         self.assertEqual(
-            self.sq.SearchColumn(self.name_table, "*", sqlWHERE="old > 20", sqlORDER_BY="id", sqlLIMIT=(4, 2)),
+            self.sq.SearchColumn(self.name_table, "*", sqlWHERE="old > 20", sqlORDER_BY=sqn.order_by("id"),
+                                 sqlLIMIT=sqn.limit(4, 2)),
             [(3, 'Mush', 321, '21'), (4, 'Patio', 231, '21'),
              (5, 'Svetha', 24, 'None')])  # До 4 с интервалам 2
+
+        self.assertEqual(self.sq.SearchColumn(self.name_table, "*", sqlWHERE="old > 20", sqlORDER_BY=sqn.order_by("id"),
+                                              sqlLIMIT=sqn.limit(4, 2), FlagReturnSqlRequest=True),
+                         'SELECT * FROM stocks WHERE old > 20 ORDER BY id ASC LIMIT 4 OFFSET 2')
 
     def test_ExecuteManyTable_and_sqlJOIN(self):
         # Проверка когда созданы ДВЕ таблицы и мы проверяем то что заголвки подобрны правильно для заполения
@@ -315,19 +324,20 @@ class TestSqlLite(unittest.TestCase):
                           (2, 23, 33, 1.1), (1, 324, 25, 1.1), (0, 3323, 11, 1.1)])
 
         # Провекра LIMIT у GetTable
-        self.assertEqual(self.sq.GetTable("new", 3), [(0, 3323, 11, 1.1), (0, 21, 11, 1.1), (2, 223, 33, 1.1)])
+        self.assertEqual(self.sq.GetTable("new", sqn.limit(3)),
+                         [(0, 3323, 11, 1.1), (0, 21, 11, 1.1), (2, 223, 33, 1.1)])
 
         # Проверка sqlJOIN
-        self.assertEqual(self.sq.SearchColumn(self.name_table,
-                                              sqlSelect=(f'{self.name_table}.name', "new.many"),
-                                              sqlJOIN=SqlName.InnerJoin("new", f"{self.name_table}.id =  new.id")),
-                         [('Denis', 21), ('Denis', 3323), ('Denis', 3323), ('Denis', 3323), ('Musha', 21),
-                          ('Musha', 324), ('Dima', 23), ('Dima', 223)])
+        self.assertEqual(
+            self.sq.SearchColumn(self.name_table, sqlSelect=sqn.select(f'{self.name_table}.name', "new.many"),
+                                 sqlJOIN=sqn.InnerJoin("new", f"{self.name_table}.id =  new.id")),
+            [('Denis', 21), ('Denis', 3323), ('Denis', 3323), ('Denis', 3323), ('Musha', 21),
+             ('Musha', 324), ('Dima', 23), ('Dima', 223)])
 
     def test_ExecuteManyTableDict(self):
         # Проверка записи ExecuteManyTableDict
         self.sq.CreateTable(self.name_table,
-                            {"id": (int, SqlName.IDAUTO), "name": str, "old": int, "sex": (str, SqlName.NND())})
+                            {"id": (int, sqn.IDAUTO), "name": str, "old": int, "sex": (str, sqn.NND())})
         self.sq.ExecuteManyTableDict(self.name_table,
                                      [{"name": "Denis", "old": 21},
                                       {"name": "Katy", "old": 21, "sex": 1},
@@ -338,22 +348,22 @@ class TestSqlLite(unittest.TestCase):
 
     def test_ListTables_and___update_header_table(self):
         # Проверка получения списка таблиц
-        test_header = {"id": (int, SqlName.PK),
+        test_header = {"id": (int, sqn.PK),
                        "name": (str),
-                       "old": (int, SqlName.NND(5)),
-                       "salary": (float, SqlName.NN)}
+                       "old": (int, sqn.NND(5)),
+                       "salary": (float, sqn.NN)}
         self.sq.CreateTable(self.name_table, test_header)
 
-        test_header = {"id": (int, SqlName.PK),
+        test_header = {"id": (int, sqn.PK),
                        "film": (str),
                        "old": (int),
                        "salary": (float)}
         self.sq.CreateTable(self.name_table, test_header)
         self.sq.CreateTable("test1", test_header)
 
-        test_header = {"id": (int, SqlName.PK),
+        test_header = {"id": (int, sqn.PK),
                        "name": (str),
-                       "happy": (int, SqlName.NND(52)),
+                       "happy": (int, sqn.NND(52)),
                        "salary": (float)}
         self.sq.CreateTable(self.name_table, test_header)
         self.sq.CreateTable("test2", test_header)
@@ -363,7 +373,7 @@ class TestSqlLite(unittest.TestCase):
         # Проверка __update_header_table для новой таблицы
         sq = SqlLiteQrm(self.name_db)
         self.assertEqual(sq.ListTables(), ['stocks', 'test1', 'test2'])
-        self.assertEqual(sq.header_table['test1'], {"id": (int, SqlName.PK),
+        self.assertEqual(sq.header_table['test1'], {"id": (int, sqn.PK),
                                                     "film": (str, ''),
                                                     "old": (int, ''),
                                                     "salary": (float, '')})
@@ -371,7 +381,7 @@ class TestSqlLite(unittest.TestCase):
     def test_GetColumn(self):
         # Проверка получения столбца
         self.sq.CreateTable(self.name_table,
-                            {"id": (int, SqlName.IDAUTO), "name": str, "old": int, "sex": (str, SqlName.NND())})
+                            {"id": (int, sqn.IDAUTO), "name": str, "old": int, "sex": (str, sqn.NND())})
         self.sq.ExecuteManyTableDict(self.name_table,
                                      [{"name": "Denis", "old": 21},
                                       {"name": "Katy", "old": 21, "sex": 1},
@@ -384,7 +394,7 @@ class TestSqlLite(unittest.TestCase):
     def tests_UpdateColumne(self):
         # Проверка обновления данных
         self.sq.CreateTable(self.name_table,
-                            {"id": (int, SqlName.IDAUTO), "name": str, "old": int, "sex": (str, SqlName.NND())})
+                            {"id": (int, sqn.IDAUTO), "name": str, "old": int, "sex": (str, sqn.NND())})
         self.sq.ExecuteManyTableDict(self.name_table, [{"name": "Denis", "old": 21},
                                                        {"name": "Katy", "old": 221, "sex": 1},
                                                        {"name": "Mush", "old": 321, "sex": 21},
@@ -399,7 +409,7 @@ class TestSqlLite(unittest.TestCase):
 
         # Проверка обновления данных с WHERE
         self.sq.CreateTable(self.name_table,
-                            {"id": (int, SqlName.IDAUTO), "name": str, "old": int, "sex": (str, SqlName.NND())})
+                            {"id": (int, sqn.IDAUTO), "name": str, "old": int, "sex": (str, sqn.NND())})
         self.sq.ExecuteManyTableDict(self.name_table, [{"name": "Denis", "old": 21},
                                                        {"name": "Katy", "old": 221, "sex": 1},
                                                        {"name": "Mush", "old": 321, "sex": 21},
@@ -414,7 +424,7 @@ class TestSqlLite(unittest.TestCase):
 
         # Проверка обновления данных с WHERE и LIKE
         self.sq.CreateTable(self.name_table,
-                            {"id": (int, SqlName.IDAUTO), "name": str, "old": int, "sex": (str, SqlName.NND())})
+                            {"id": (int, sqn.IDAUTO), "name": str, "old": int, "sex": (str, sqn.NND())})
         self.sq.ExecuteManyTableDict(self.name_table, [{"name": "Denis", "old": 21},
                                                        {"name": "Katy", "old": 221, "sex": 1},
                                                        {"name": "Mush", "old": 321, "sex": 21},
@@ -429,7 +439,7 @@ class TestSqlLite(unittest.TestCase):
 
         # Проверка изменения нескольких стобцов
         self.sq.CreateTable(self.name_table,
-                            {"id": (int, SqlName.IDAUTO), "name": str, "old": int, "sex": (str, SqlName.NND())})
+                            {"id": (int, sqn.IDAUTO), "name": str, "old": int, "sex": (str, sqn.NND())})
         self.sq.ExecuteManyTableDict(self.name_table, [{"name": "Denis", "old": 21},
                                                        {"name": "Katy", "old": 221, "sex": 1},
                                                        {"name": "Mush", "old": 321, "sex": 21},
@@ -445,7 +455,7 @@ class TestSqlLite(unittest.TestCase):
 
     def test_DeleteLineTable(self):
         self.sq.CreateTable(self.name_table,
-                            {"id": (int, SqlName.IDAUTO), "name": str, "old": int, "sex": (str, SqlName.NND())})
+                            {"id": (int, sqn.IDAUTO), "name": str, "old": int, "sex": (str, sqn.NND())})
         self.sq.ExecuteManyTableDict(self.name_table, [{"name": "Denis", "old": 21},
                                                        {"name": "Katy", "old": 221, "sex": 1},
                                                        {"name": "Mush", "old": 321, "sex": 21},
@@ -457,27 +467,34 @@ class TestSqlLite(unittest.TestCase):
     def test_AggregatingSearchColumne(self):
         # Тестирование агрегирующийх функций и групировок
         self.sq.CreateTable(self.name_table,
-                            {"id": (int, SqlName.IDAUTO), "name": str, "old": int, "sex": (str, SqlName.NND())})
+                            {"id": (int, sqn.IDAUTO), "name": str, "old": int, "sex": (str, sqn.NND())})
         self.sq.ExecuteManyTableDict(self.name_table, [{"name": "Denis", "old": 21},
                                                        {"name": "Katy", "old": 221, "sex": 1},
                                                        {"name": "Mush", "old": 321, "sex": 21},
                                                        {"name": "Patio", "old": 231, "sex": 21},
                                                        {"name": "Denis", "old": 24}])
 
-        self.assertEqual(self.sq.SearchColumn(self.name_table, SqlName.count("sex"), sqlWHERE="old < 25"), [(2,)])
-        self.assertEqual(self.sq.SearchColumn(self.name_table, SqlName.sum("old"), sqlWHERE="old < 25"), [(45,)])
-        self.assertEqual(self.sq.SearchColumn(self.name_table, SqlName.max("old"), sqlWHERE="old < 25"), [(24,)])
-        self.assertEqual(self.sq.SearchColumn(self.name_table, SqlName.min("old"), sqlWHERE="old < 25"), [(21,)])
-        self.assertEqual(self.sq.SearchColumn(self.name_table, SqlName.avg("old")), [(163.6,)])
+        self.assertEqual(self.sq.SearchColumn(self.name_table, sqn.count("sex"), sqlWHERE="old < 25"), [(2,)])
+        self.assertEqual(self.sq.SearchColumn(self.name_table, sqn.sum("old"), sqlWHERE="old < 25"), [(45,)])
+        self.assertEqual(self.sq.SearchColumn(self.name_table, sqn.max("old"), sqlWHERE="old < 25"), [(24,)])
+        self.assertEqual(self.sq.SearchColumn(self.name_table, sqn.min("old"), sqlWHERE="old < 25"), [(21,)])
+        self.assertEqual(self.sq.SearchColumn(self.name_table, sqn.avg("old")), [(163.6,)])
 
         # Проверка уникального столбца DISTINCT
-        self.assertEqual(self.sq.SearchColumn(self.name_table, SqlName.count("-name"), sqlWHERE="old < 25"), [(1,)])
+        self.assertEqual(self.sq.SearchColumn(self.name_table, sqn.count("-name"), sqlWHERE="old < 25"), [(1,)])
         # Проверка sqlGROUPBY
-        self.assertEqual(self.sq.SearchColumn(self.name_table, ("name", SqlName.sum("old")), sqlGROUPBY="name"),
-                         [('Denis', 45), ('Katy', 221), ('Mush', 321), ('Patio', 231)])
-        self.assertEqual(self.sq.SearchColumn(self.name_table, "*", sqlGROUPBY=("sex", "name")),
+        self.assertEqual(
+            self.sq.SearchColumn(self.name_table, sqn.select("name", sqn.sum("old")), sqlGROUPBY=sqn.group_by("name")),
+            [('Denis', 45), ('Katy', 221), ('Mush', 321), ('Patio', 231)])
+        self.assertEqual(self.sq.SearchColumn(self.name_table, sqn.select("*"), sqlGROUPBY=sqn.group_by("sex", "name")),
                          [(2, 'Katy', 221, '1'), (3, 'Mush', 321, '21'), (4, 'Patio', 231, '21'),
                           (1, 'Denis', 21, 'None')])
+
+    def test_HeadTable_and___print_table(self):
+        # Проверять на глаз
+        self.sq.CreateTable(self.name_table, {"id": int, "name": str, "old": int})
+        self.sq.HeadTable(self.name_table, 1)
+        # print(self.sq.HeadTable(self.name_table, 15)
 
     def __del__(self):
         self.sq.DeleteDb()
