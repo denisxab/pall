@@ -473,7 +473,10 @@ class SqlLiteQrm:
                 res = cursor.fetchall()
 
             if FlagPrint:
+                if sqlSelect == "*":
+                    sqlSelect = ", ".join(self.header_table[name_table].keys())
                 print(self.__print_table(name_table, sqlSelect, res, FlagPrint))
+
             return res
 
     def __print_table(self, name_table: str,
