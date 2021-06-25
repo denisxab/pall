@@ -152,13 +152,13 @@ class TestSqlLite(unittest.TestCase):
         test_data = ("text", 123, 122.32, b"1011")
         self.sq.CreateTable(self.name_table, test_header)
         self.assertEqual(self.sq.header_table[self.name_table], test_header)
-        self.sq.ExecuteTable(self.name_table, test_data)
+        self.sq.ExecuteTable(self.name_table, test_data, CheckBLOB=True)
         self.assertEqual(self.sq.GetTable(self.name_table)[0], test_data)
         self.sq.DeleteTable(self.name_table)
         # List
         self.sq.CreateTable(self.name_table, test_header)
         self.assertEqual(self.sq.header_table[self.name_table], test_header)
-        self.sq.ExecuteTable(self.name_table, list(test_data))
+        self.sq.ExecuteTable(self.name_table, list(test_data), CheckBLOB=True)
         self.assertEqual(self.sq.GetTable(self.name_table)[0], test_data)
         self.sq.DeleteTable(self.name_table)
 
@@ -174,6 +174,21 @@ class TestSqlLite(unittest.TestCase):
 
         self.assertRaises(TypeError, self.sq.ExecuteTable, (self.name_table, test_data))
         self.sq.DeleteTable(self.name_table)
+
+        # ExecuteManyTable запись BLOB и проврека CheckBLOB
+        self.sq.CreateTable(self.name_table, {
+            'car_id': (int, sqn.IDAUTO),
+            "model": str,
+            "price": bytes
+        })
+        cars = [
+            ["Audi", b'432'],
+            ["Maer", b'424'],
+            ["Skoda", b"122"]
+        ]
+        self.sq.ExecuteManyTable(self.name_table, cars, countNull=1, CheckBLOB=True)
+        self.assertEqual(self.sq.GetTable(self.name_table),
+                         [(1, 'Audi', b'432'), (2, 'Maer', b'424'), (3, 'Skoda', b'122')])
 
     def test_error_ExecuteTable(self):
         # Проверка записи в таблицу неправильные данные
@@ -333,6 +348,24 @@ class TestSqlLite(unittest.TestCase):
                                  sqlJOIN=sqn.InnerJoin("new", f"{self.name_table}.id =  new.id")),
             [('Denis', 21), ('Denis', 3323), ('Denis', 3323), ('Denis', 3323), ('Musha', 21),
              ('Musha', 324), ('Dima', 23), ('Dima', 223)])
+
+        self.sq.DeleteTable(self.name_table)
+        self.sq.DeleteTable("new")
+
+        # Проверка пропсука элемента PRIMARY KEY AUTOINCREMENT
+        self.sq.CreateTable(self.name_table, {
+            'car_id': (int, sqn.IDAUTO),
+            "model": str,
+            "price": int
+        })
+
+        cars = [
+            ("Audi", 432),
+            ("Maer", 424),
+            ("Skoda", 122)
+        ]
+        self.sq.ExecuteManyTable(self.name_table, cars, countNull=1)
+        self.assertEqual(self.sq.GetTable(self.name_table), [(1, 'Audi', 432), (2, 'Maer', 424), (3, 'Skoda', 122)])
 
     def test_ExecuteManyTableDict(self):
         # Проверка записи ExecuteManyTableDict

@@ -1,6 +1,7 @@
 import sqlite3
 from os import remove
 from os.path import exists, abspath
+from sqlite3 import Binary
 from typing import List, Tuple, Dict, Union
 
 
@@ -244,15 +245,21 @@ class SqlLiteQrm:
                      data: Union[str, List[Union[str, bytes, int, float]],
                                  Tuple,
                                  Dict[str, Union[str, bytes, int, float]]],
-                     sqlRequest: str = ""
+                     sqlRequest: str = "",
+                     CheckBLOB: bool = False
                      ):  # +
-
+        """
+        :param name_table:
+        :param data:
+        :param sqlRequest:
+        :param CheckBLOB: проверка стурктуры на анличие бинарных бинырных данных и перевод их  в sqlite3.Binary()
+        :return:
+        """
         request: str = "INSERT INTO {0}".format(name_table)
 
         if sqlRequest:  # для вложенных запрсов
             request += " {0}".format(sqlRequest)
             data = None
-
 
         else:
             if type(data) == str:  # Для SQL команд
@@ -261,7 +268,6 @@ class SqlLiteQrm:
                         "Нельзя отпраять BLOB в формате строки. Воспользуйтесь добавление данных через list")
                 request += " {0} VALUES {1}".format(tuple(self.header_table[name_table].keys()), data)
                 data = None
-
 
             else:  # Для структур данных
                 res: str = ', '.join('?' * len(data))
@@ -272,24 +278,50 @@ class SqlLiteQrm:
                         raise IndexError("Именя переданного столбца неуществует")
 
                     request += " {0} VALUES ({1})".format(tuple(data.keys()), res)
-                    data = tuple(data.values())
 
+                    if CheckBLOB:
+                        data = list(data.values())
+                        for index1, tup in enumerate(data):
+                            if type(tup) == bytes:
+                                data[index1] = Binary(tup)
+                        data = tuple(data)
+                    else:
+                        data = tuple(data.values())
 
                 # Конвертация типов list, tuple в SQL запрос
                 elif type(data) == tuple or type(data) == list:
                     if len(data) != len(self.header_table[name_table]):
                         raise IndexError("Разное колличество столбцов таблицы и входных данных")
+
                     request += " {0} VALUES ({1})".format(tuple(self.header_table[name_table].keys()), res)
 
             with sqlite3.connect(self.name_db) as connection:
                 cursor = connection.cursor()
                 cursor.execute(request, data) if data else cursor.execute(request)
 
-    def ExecuteManyTable(self, name_table: str,
-                         data: List[Union[List[Union[str, bytes, int, float]], Tuple]],
-                         countNull: int = 0
-                         ):  # +
+    def __CheackBlob(self, data: List[Union[List[Union[str, bytes, Binary, int, float]], Tuple]]) -> \
+            List[Union[List[Union[str, bytes, Binary, int, float]], Tuple]]:
 
+        if type(data[0]) == tuple:
+            raise TypeError("Нельзя использовать параметер CheckBLOB на структуре данных tuple. используйте list")
+        for index1, it in enumerate(data):
+            for index2, tup in enumerate(it):
+                if type(tup) == bytes:
+                    data[index1][index2] = Binary(tup)
+        return data
+
+    def ExecuteManyTable(self, name_table: str,
+                         data: List[Union[List[Union[str, bytes, Binary, int, float]], Tuple]],
+                         countNull: int = 0,
+                         CheckBLOB: bool = False
+                         ):  # +
+        """
+        :param name_table:
+        :param data:
+        :param countNull: Ставит NULL в начале указанное колличество раз
+        :param CheckBLOB: проверка стурктуры на анличие бинарных бинырных данных и перевод их  в sqlite3.Binary()
+        :return:
+        """
         if type(data) != list:
             raise TypeError("Должен быть тип List")
 
@@ -304,6 +336,9 @@ class SqlLiteQrm:
                                                                               name_arg=tuple(
                                                                                   self.header_table[name_table].keys()),
                                                                               values=res)
+
+        if CheckBLOB:
+            data = self.__CheackBlob(data)
 
         with sqlite3.connect(self.name_db) as connection:
             cursor = connection.cursor()
@@ -327,7 +362,8 @@ class SqlLiteQrm:
         return res
 
     def GetTable(self, name_table: str,
-                 sqlLIMIT: sqn.limit = ""
+                 sqlLIMIT: sqn.limit = "",
+                 FlagPrint: int = 0
                  ) -> list:  # +
         """
         Конвертация bytes в обьекта SQl BLOB и обратно
@@ -344,7 +380,10 @@ class SqlLiteQrm:
         with sqlite3.connect(self.name_db) as connection:
             cursor = connection.cursor()
             cursor.execute(request)
-            return cursor.fetchall()
+            res = cursor.fetchall()
+            if FlagPrint:
+                print(self.__print_table(name_table, ", ".join(self.header_table[name_table].keys()), res, FlagPrint))
+            return res
 
     def GetColumn(self, name_table: str, name_columns: str) -> list:  # +
         # Получить данные из столбца
@@ -508,7 +547,6 @@ class SqlLiteQrm:
             cursor.execute(request)
 
 
-# https://www.youtube.com/watch?v=Vj5n2TGq00o&list=PLA0M1Bcd0w8x4Inr5oYttMK6J47vxgv6J&index=4
 if __name__ == '__main__':
     """
     
@@ -523,14 +561,16 @@ if __name__ == '__main__':
     sq.CreateTable(name_table, {
         'car_id': (int, sqn.IDAUTO),
         "model": str,
-        "price": int
+        "price": bytes
     })
 
     cars = [
-        ("Audi", 432),
-        ("Maer", 424),
-        ("Skoda", 122)
+        ["Audi", b'432'],
+        ["Maer", b'424'],
+        ["Skoda", b"122"]
     ]
-    sq.ExecuteManyTable(name_table, cars, countNull=1)
+
+    sq.ExecuteManyTable(name_table, cars, countNull=1, CheckBLOB=True)
+    print(sq.GetTable(name_table))
 
     print()
