@@ -219,16 +219,16 @@ class TestSqlLite(unittest.TestCase):
                                       {"name": "Svetha", "old": 24}]
                                      )
 
-        self.assertEqual(self.sq.SearchColumn(self.name_table, "name", "old == 21"), [('Denis',), ('Katy',)])
-        self.assertEqual(self.sq.SearchColumn(self.name_table, ("name", "sex"), "old == 21"),
+        self.assertEqual(self.sq.SearchColumn(self.name_table, "name", sqlWHERE="old == 21"), [('Denis',), ('Katy',)])
+        self.assertEqual(self.sq.SearchColumn(self.name_table, ("name", "sex"), sqlWHERE="old == 21"),
                          [('Denis', 'None'), ('Katy', '1')])
-        self.assertEqual(self.sq.SearchColumn(self.name_table, "*", "old == 21"),
+        self.assertEqual(self.sq.SearchColumn(self.name_table, "*", sqlWHERE="old == 21"),
                          [(1, 'Denis', 21, 'None'), (2, 'Katy', 21, '1')])
 
-        self.assertEqual(self.sq.SearchColumn(self.name_table, "name", "old <= 21"), [('Denis',), ('Katy',)])
-        self.assertEqual(self.sq.SearchColumn(self.name_table, "name", "old < 21"), [])
-        self.assertEqual(self.sq.SearchColumn(self.name_table, "name", "old > 21"), [('Svetha',)])
-        self.assertEqual(self.sq.SearchColumn(self.name_table, "name", "old >= 21"),
+        self.assertEqual(self.sq.SearchColumn(self.name_table, "name", sqlWHERE="old <= 21"), [('Denis',), ('Katy',)])
+        self.assertEqual(self.sq.SearchColumn(self.name_table, "name", sqlWHERE="old < 21"), [])
+        self.assertEqual(self.sq.SearchColumn(self.name_table, "name", sqlWHERE="old > 21"), [('Svetha',)])
+        self.assertEqual(self.sq.SearchColumn(self.name_table, "name", sqlWHERE="old >= 21"),
                          [('Denis',), ('Katy',), ('Svetha',)])
 
         self.sq.DeleteTable(self.name_table)
@@ -242,15 +242,16 @@ class TestSqlLite(unittest.TestCase):
                                                        {"name": "Patio", "old": 21, "sex": 21},
                                                        {"name": "Svetha", "old": 24}])
 
-        self.assertEqual(self.sq.SearchColumn(self.name_table, "name", "old == 21 and sex == 21"),
+        self.assertEqual(self.sq.SearchColumn(self.name_table, "name", sqlWHERE="old == 21 and sex == 21"),
                          [('Mush',), ('Patio',)])  # И
-        self.assertEqual(self.sq.SearchColumn(self.name_table, "name", "old BETWEEN 10 and 21"),
+        self.assertEqual(self.sq.SearchColumn(self.name_table, "name", sqlWHERE="old BETWEEN 10 and 21"),
                          [('Denis',), ('Katy',), ('Mush',), ('Patio',)])  # В пределах
-        self.assertEqual(self.sq.SearchColumn(self.name_table, "name", "old in (24,22)"),
+        self.assertEqual(self.sq.SearchColumn(self.name_table, "name", sqlWHERE="old in (24,22)"),
                          [('Svetha',)])  # Содержиться В ()
-        self.assertEqual(self.sq.SearchColumn(self.name_table, "name", "old == 21 or sex == 1"),
+        self.assertEqual(self.sq.SearchColumn(self.name_table, "name", sqlWHERE="old == 21 or sex == 1"),
                          [('Denis',), ('Katy',), ('Mush',), ('Patio',)])  # ИЛИ
-        self.assertEqual(self.sq.SearchColumn(self.name_table, "name", "old not in (21,24)"), [])  # Приставка НЕ
+        self.assertEqual(self.sq.SearchColumn(self.name_table, "name", sqlWHERE="old not in (21,24)"),
+                         [])  # Приставка НЕ
         self.sq.DeleteTable(self.name_table)
 
         # Сортировка ORDER BY
@@ -261,7 +262,7 @@ class TestSqlLite(unittest.TestCase):
                                                        {"name": "Mush", "old": 321, "sex": 21},
                                                        {"name": "Patio", "old": 231, "sex": 21},
                                                        {"name": "Svetha", "old": 24}])
-        self.assertEqual(self.sq.SearchColumn(self.name_table, "*", "old > 20", "old"),
+        self.assertEqual(self.sq.SearchColumn(self.name_table, "*", sqlWHERE="old > 20", sqlORDER_BY="old"),
                          [(1, 'Denis', 21, 'None'),
                           (5, 'Svetha', 24, 'None'),
                           (2, 'Katy', 221, '1'),
@@ -269,19 +270,59 @@ class TestSqlLite(unittest.TestCase):
                           (3, 'Mush', 321, '21')])
 
         # Сортировка ORDER BY ___ [DESC,ASC]
-        self.assertEqual(self.sq.SearchColumn(self.name_table, "*", "old > 20", "id"),
+        self.assertEqual(self.sq.SearchColumn(self.name_table, "*", sqlWHERE="old > 20", sqlORDER_BY="id"),
                          [(1, 'Denis', 21, 'None'), (2, 'Katy', 221, '1'), (3, 'Mush', 321, '21'),
                           (4, 'Patio', 231, '21'), (5, 'Svetha', 24, 'None')])
-        self.assertEqual(self.sq.SearchColumn(self.name_table, "*", "old > 20", "-id"),
+        self.assertEqual(self.sq.SearchColumn(self.name_table, "*", sqlWHERE="old > 20", sqlORDER_BY="-id"),
                          [(5, 'Svetha', 24, 'None'), (4, 'Patio', 231, '21'), (3, 'Mush', 321, '21'),
                           (2, 'Katy', 221, '1'), (1, 'Denis', 21, 'None')])
 
         # LIMIT
-        self.assertEqual(self.sq.SearchColumn(self.name_table, "*", "old > 20", "id", 2),
+        self.assertEqual(self.sq.SearchColumn(self.name_table, "*", sqlWHERE="old > 20", sqlORDER_BY="id", sqlLIMIT=2),
                          [(1, 'Denis', 21, 'None'), (2, 'Katy', 221, '1')])  # До 2
-        self.assertEqual(self.sq.SearchColumn(self.name_table, "*", "old > 20", "id", (4, 2)),
-                         [(3, 'Mush', 321, '21'), (4, 'Patio', 231, '21'),
-                          (5, 'Svetha', 24, 'None')])  # До 4 с интервалам 2
+        self.assertEqual(
+            self.sq.SearchColumn(self.name_table, "*", sqlWHERE="old > 20", sqlORDER_BY="id", sqlLIMIT=(4, 2)),
+            [(3, 'Mush', 321, '21'), (4, 'Patio', 231, '21'),
+             (5, 'Svetha', 24, 'None')])  # До 4 с интервалам 2
+
+    def test_ExecuteManyTable_and_sqlJOIN(self):
+        # Проверка когда созданы ДВЕ таблицы и мы проверяем то что заголвки подобрны правильно для заполения
+
+        self.sq.CreateTable(self.name_table, {"id": int, "name": str, "old": int})
+        self.sq.ExecuteManyTable(self.name_table, [
+            [0, "Denis", 21],
+            [1, "Musha", 25],
+            [2, "Dima", 33]
+        ])
+        # Проверка когда созданы ДВЕ таблицы и мы проверяем то что заголвки подобрны правильно для заполения
+
+        self.sq.DeleteTable("new")
+        self.sq.CreateTable("new", {"id": int, "many": int, "score": int, "any": float})
+        self.sq.ExecuteManyTable("new", [
+            [0, 3323, 11, 1.1],
+            [0, 21, 11, 1.1],
+            [2, 223, 33, 1.1],
+            [1, 21, 25, 1.1],
+            [0, 3323, 11, 1.1],
+            [2, 23, 33, 1.1],
+            [1, 324, 25, 1.1],
+            [0, 3323, 11, 1.1]
+        ])
+
+        self.assertEqual(self.sq.GetTable(self.name_table), [(0, 'Denis', 21), (1, 'Musha', 25), (2, 'Dima', 33)])
+        self.assertEqual(self.sq.GetTable("new"),
+                         [(0, 3323, 11, 1.1), (0, 21, 11, 1.1), (2, 223, 33, 1.1), (1, 21, 25, 1.1), (0, 3323, 11, 1.1),
+                          (2, 23, 33, 1.1), (1, 324, 25, 1.1), (0, 3323, 11, 1.1)])
+
+        # Провекра LIMIT у GetTable
+        self.assertEqual(self.sq.GetTable("new", 3), [(0, 3323, 11, 1.1), (0, 21, 11, 1.1), (2, 223, 33, 1.1)])
+
+        # Проверка sqlJOIN
+        self.assertEqual(self.sq.SearchColumn(self.name_table,
+                                              sqlSelect=(f'{self.name_table}.name', "new.many"),
+                                              sqlJOIN=SqlName.InnerJoin("new", f"{self.name_table}.id =  new.id")),
+                         [('Denis', 21), ('Denis', 3323), ('Denis', 3323), ('Denis', 3323), ('Musha', 21),
+                          ('Musha', 324), ('Dima', 23), ('Dima', 223)])
 
     def test_ExecuteManyTableDict(self):
         # Проверка записи ExecuteManyTableDict
@@ -401,6 +442,42 @@ class TestSqlLite(unittest.TestCase):
                           (4, 'Patio', 99, '88'), (5, 'Pvetha', 99, '88')])
 
         self.sq.DeleteTable(self.name_table)
+
+    def test_DeleteLineTable(self):
+        self.sq.CreateTable(self.name_table,
+                            {"id": (int, SqlName.IDAUTO), "name": str, "old": int, "sex": (str, SqlName.NND())})
+        self.sq.ExecuteManyTableDict(self.name_table, [{"name": "Denis", "old": 21},
+                                                       {"name": "Katy", "old": 221, "sex": 1},
+                                                       {"name": "Mush", "old": 321, "sex": 21},
+                                                       {"name": "Patio", "old": 231, "sex": 21},
+                                                       {"name": "Pvetha", "old": 24}])
+        self.sq.DeleteLineTable(self.name_table, "old > 25")
+        self.assertEqual(self.sq.GetTable(self.name_table), [(1, 'Denis', 21, 'None'), (5, 'Pvetha', 24, 'None')])
+
+    def test_AggregatingSearchColumne(self):
+        # Тестирование агрегирующийх функций и групировок
+        self.sq.CreateTable(self.name_table,
+                            {"id": (int, SqlName.IDAUTO), "name": str, "old": int, "sex": (str, SqlName.NND())})
+        self.sq.ExecuteManyTableDict(self.name_table, [{"name": "Denis", "old": 21},
+                                                       {"name": "Katy", "old": 221, "sex": 1},
+                                                       {"name": "Mush", "old": 321, "sex": 21},
+                                                       {"name": "Patio", "old": 231, "sex": 21},
+                                                       {"name": "Denis", "old": 24}])
+
+        self.assertEqual(self.sq.SearchColumn(self.name_table, SqlName.count("sex"), sqlWHERE="old < 25"), [(2,)])
+        self.assertEqual(self.sq.SearchColumn(self.name_table, SqlName.sum("old"), sqlWHERE="old < 25"), [(45,)])
+        self.assertEqual(self.sq.SearchColumn(self.name_table, SqlName.max("old"), sqlWHERE="old < 25"), [(24,)])
+        self.assertEqual(self.sq.SearchColumn(self.name_table, SqlName.min("old"), sqlWHERE="old < 25"), [(21,)])
+        self.assertEqual(self.sq.SearchColumn(self.name_table, SqlName.avg("old")), [(163.6,)])
+
+        # Проверка уникального столбца DISTINCT
+        self.assertEqual(self.sq.SearchColumn(self.name_table, SqlName.count("-name"), sqlWHERE="old < 25"), [(1,)])
+        # Проверка sqlGROUPBY
+        self.assertEqual(self.sq.SearchColumn(self.name_table, ("name", SqlName.sum("old")), sqlGROUPBY="name"),
+                         [('Denis', 45), ('Katy', 221), ('Mush', 321), ('Patio', 231)])
+        self.assertEqual(self.sq.SearchColumn(self.name_table, "*", sqlGROUPBY=("sex", "name")),
+                         [(2, 'Katy', 221, '1'), (3, 'Mush', 321, '21'), (4, 'Patio', 231, '21'),
+                          (1, 'Denis', 21, 'None')])
 
     def __del__(self):
         self.sq.DeleteDb()
