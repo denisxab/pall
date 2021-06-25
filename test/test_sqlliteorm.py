@@ -1,8 +1,10 @@
+import sqlite3
 import unittest
 from os import path, listdir
 from os.path import getsize
 from sqlite3 import OperationalError
 
+from file import TxtFile
 from sqlliteorm import SqlLiteQrm, sqn
 
 
@@ -528,6 +530,40 @@ class TestSqlLite(unittest.TestCase):
         self.sq.CreateTable(self.name_table, {"id": int, "name": str, "old": int})
         self.sq.HeadTable(self.name_table, 1)
         # print(self.sq.HeadTable(self.name_table, 15)
+
+    def test_SaveDbToFile_ReadFileToDb(self):
+        # # ExecuteManyTable запись BLOB и проврека CheckBLOB
+        self.sq.CreateTable(self.name_table, {
+            'car_id': (int, sqn.IDAUTO),
+            "model": str,
+            "price": bytes
+        })
+        cars = [
+            ["Audi", b'432'],
+            ["Maer", b'424'],
+            ["Skoda", b"122"]
+        ]
+        self.sq.ExecuteManyTable(self.name_table, cars, countNull=1, CheckBLOB=True)
+
+        # тут появляеться запись
+        # DELETE FROM "sqlite_sequence";INSERT INTO "sqlite_sequence" VALUES(\'stocks\',3);
+        # Который вызвывает ошибку чтения данных из файла, функция ReadFileToDb обрабатывает эту ошибку
+        # Если этой ошибку больше не будет то и функцию ReadFileToDb можно упростить
+        # tmp = ""
+        # with sqlite3.connect(self.name_db) as connection:
+        #     for sql in connection.iterdump():
+        #         tmp += sql
+        # self.assertEqual(tmp,
+        #                  'BEGIN TRANSACTION;DELETE FROM "sqlite_sequence";INSERT INTO "sqlite_sequence" VALUES(\'stocks\',3);CREATE TABLE stocks (car_id INTEGER PRIMARY KEY AUTOINCREMENT, model TEXT, price BLOB);INSERT INTO "stocks" VALUES(1,\'Audi\',X\'343332\');INSERT INTO "stocks" VALUES(2,\'Maer\',X\'343234\');INSERT INTO "stocks" VALUES(3,\'Skoda\',X\'313232\');COMMIT;')
+
+        self.sq.SaveDbToFile("test_save.txt")
+        self.sq.DeleteDb()
+        self.sq.ReadFileToDb("test_save.txt")
+        self.assertEqual(self.sq.GetTable(self.name_table),
+                         [(1, 'Audi', b'432'), (2, 'Maer', b'424'), (3, 'Skoda', b'122')])
+
+        tm = TxtFile("test_save.txt")
+        tm.deleteFile()
 
     def __del__(self):
         self.sq.DeleteDb()

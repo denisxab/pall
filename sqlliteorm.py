@@ -4,6 +4,8 @@ from os.path import exists, abspath
 from sqlite3 import Binary
 from typing import List, Tuple, Dict, Union
 
+from file import TxtFile
+
 
 class sqn:
     PK: str = "PRIMARY KEY"  # Должны содержать ункальные значения
@@ -135,7 +137,7 @@ def toSqlRequest(data: Dict[str, Union[tuple, str]]) -> str:
         res += "{0}{1}".format(tmp, ", ")
 
     res = res[:-2:]
-    res += ");"
+    res += ")"
     return res
 
 
@@ -213,12 +215,24 @@ class SqlLiteQrm:
         if exists(self.name_db):
             remove(abspath(self.name_db))
 
-    def DeleteTable(self, name_tables: str):  # +
-        if self.header_table.get(name_tables):
-            self.header_table.pop(name_tables)
-        with sqlite3.connect(self.name_db) as connection:
-            cursor = connection.cursor()
-            cursor.execute("DROP TABLE IF EXISTS {0};".format(name_tables))  # Удалить таблицу если она существует
+    def DeleteTable(self, name_tables: Union[str, List[str]]):  # +
+
+        # Удалить несоклько таблиц
+        if type(name_tables) == list:
+            for item in name_tables:
+                if self.header_table.get(item):
+                    self.header_table.pop(item)
+                with sqlite3.connect(self.name_db) as connection:
+                    cursor = connection.cursor()
+                    cursor.execute(
+                        "DROP TABLE IF EXISTS {0};".format(item))  # Удалить таблицу если она существует
+
+        else:
+            if self.header_table.get(name_tables):
+                self.header_table.pop(name_tables)
+            with sqlite3.connect(self.name_db) as connection:
+                cursor = connection.cursor()
+                cursor.execute("DROP TABLE IF EXISTS {0};".format(name_tables))  # Удалить таблицу если она существует
 
     def CreateTable(self, name_table: str, data: Union[str, Dict]):  # +
 
@@ -546,31 +560,52 @@ class SqlLiteQrm:
             cursor = connection.cursor()
             cursor.execute(request)
 
+    def SaveDbToFile(self, name_save_db):
+        tm = TxtFile(name_save_db)
+        tm.deleteFile()
+        with sqlite3.connect(self.name_db) as connection:
+            for sql in connection.iterdump():
+                tm.appendFile(sql)
+
+    def ReadFileToDb(self, name_read_db):
+        tm = TxtFile(name_read_db)
+        with sqlite3.connect(self.name_db) as connection:
+            cursor = connection.cursor()
+            # Это все для того чтобы пропустить эти строки которые возникают непонятно почему
+            # DELETE FROM "sqlite_sequence";INSERT INTO "sqlite_sequence" VALUES('stocks',3);
+            cursor.execute("BEGIN TRANSACTION;")
+            tmp = False
+            for text in tm.readFile().split(";"):
+                if tmp:
+                    cursor.execute(text)
+                else:
+                    if text.find("CREATE") != -1:
+                        tmp = True
+                        cursor.execute(text)
+
 
 if __name__ == '__main__':
-    """
-    
-    
-    """
-
     name_db = 'example.db'
-    name_table = "cars"
+    name_table = "cadrs"
     sq = SqlLiteQrm(name_db)
-    sq.DeleteTable(name_table)
+    # sq.ReadFileToDb("testsave.txt")
 
     sq.CreateTable(name_table, {
         'car_id': (int, sqn.IDAUTO),
         "model": str,
         "price": bytes
     })
-
     cars = [
         ["Audi", b'432'],
         ["Maer", b'424'],
         ["Skoda", b"122"]
     ]
-
     sq.ExecuteManyTable(name_table, cars, countNull=1, CheckBLOB=True)
-    print(sq.GetTable(name_table))
 
-    print()
+    with sqlite3.connect('example.db') as connection:
+        for sql in connection.iterdump():
+            print(sql)
+
+    sq.GetTable(name_table, FlagPrint=10)
+    # sq.SaveDbToFile("testsave.txt")
+    # sq.ReadFileToDb("testsave.txt")
