@@ -326,34 +326,31 @@ class SqlLiteQrm:
 
     def ExecuteManyTable(self, name_table: str,
                          data: List[Union[List[Union[str, bytes, Binary, int, float]], Tuple]],
-                         countNull: int = 0,
-                         CheckBLOB: bool = False
+                         CheckBLOB: bool = False,
+                         head_data: Union[List[str],Tuple] = None
                          ):  # +
         """
         :param name_table:
         :param data:
-        :param countNull: Ставит NULL в начале указанное колличество раз
         :param CheckBLOB: проверка стурктуры на анличие бинарных бинырных данных и перевод их  в sqlite3.Binary()
+        :param head_data: собственные заголовки
         :return:
         """
         if type(data) != list:
             raise TypeError("Должен быть тип List")
 
-        res: str = ""
+        # Для получения имен параметров name_head_data
+        if not head_data:
+            head_data = tuple(self.header_table[name_table].keys())
 
-        # Для пропуска значений например PRIMARY KEY AUTOINCREMENT
-        if countNull:
-            res = 'NULL, ' * countNull
-        res += ', '.join('?' * (len(self.header_table[name_table]) - countNull))
-
-        request: str = "INSERT INTO {nt} {name_arg} VALUES ({values})".format(nt=name_table,
-                                                                              name_arg=tuple(
-                                                                                  self.header_table[name_table].keys()),
-                                                                              values=res)
-
+        # Нахождение в массиве данных типа bytes и перевод их через sqlite3.Binary()
         if CheckBLOB:
             data = self.__CheackBlob(data)
 
+        res: str = ', '.join('?' * (len(head_data)))
+        request: str = "INSERT INTO {nt} {name_arg} VALUES ({values})".format(nt=name_table,
+                                                                              name_arg=head_data,
+                                                                              values=res)
         with sqlite3.connect(self.name_db) as connection:
             cursor = connection.cursor()
             cursor.executemany(request, data)
@@ -418,9 +415,6 @@ class SqlLiteQrm:
                      FlagReturnSqlRequest: bool = False
                      ) -> Union[List[tuple], str]:  # +
         """
-
-
-
         :param name_table: Название таблицы
         :param sqlSelect: sqn.select :Union[str, Tuple]
         :param sqlJOIN: sqn.InnerJoin||LeftJoin :Union[str, Tuple]

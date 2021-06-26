@@ -1,4 +1,3 @@
-import sqlite3
 import unittest
 from os import path, listdir
 from os.path import getsize
@@ -188,7 +187,7 @@ class TestSqlLite(unittest.TestCase):
             ["Maer", b'424'],
             ["Skoda", b"122"]
         ]
-        self.sq.ExecuteManyTable(self.name_table, cars, countNull=1, CheckBLOB=True)
+        self.sq.ExecuteManyTable(self.name_table, cars, head_data=("model", "price"), CheckBLOB=True)
         self.assertEqual(self.sq.GetTable(self.name_table),
                          [(1, 'Audi', b'432'), (2, 'Maer', b'424'), (3, 'Skoda', b'122')])
 
@@ -354,7 +353,7 @@ class TestSqlLite(unittest.TestCase):
         self.sq.DeleteTable(self.name_table)
         self.sq.DeleteTable("new")
 
-        # Проверка пропсука элемента PRIMARY KEY AUTOINCREMENT
+        # Проверка записи list в ExecuteManyTable через второй агругемент с именем
         self.sq.CreateTable(self.name_table, {
             'car_id': (int, sqn.IDAUTO),
             "model": str,
@@ -366,7 +365,7 @@ class TestSqlLite(unittest.TestCase):
             ("Maer", 424),
             ("Skoda", 122)
         ]
-        self.sq.ExecuteManyTable(self.name_table, cars, countNull=1)
+        self.sq.ExecuteManyTable(self.name_table, cars, head_data=("model", "price"))
         self.assertEqual(self.sq.GetTable(self.name_table), [(1, 'Audi', 432), (2, 'Maer', 424), (3, 'Skoda', 122)])
 
     def test_ExecuteManyTableDict(self):
@@ -543,7 +542,7 @@ class TestSqlLite(unittest.TestCase):
             ["Maer", b'424'],
             ["Skoda", b"122"]
         ]
-        self.sq.ExecuteManyTable(self.name_table, cars, countNull=1, CheckBLOB=True)
+        self.sq.ExecuteManyTable(self.name_table, cars, head_data=("model", "price"), CheckBLOB=True)
 
         # тут появляеться запись
         # DELETE FROM "sqlite_sequence";INSERT INTO "sqlite_sequence" VALUES(\'stocks\',3);
