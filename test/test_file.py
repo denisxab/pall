@@ -1,7 +1,8 @@
 import unittest
 from os.path import getsize
 from typing import List, Tuple, Dict, Set
-from file import TxtFile, Json
+
+from file import TxtFile, CsvFile, JsonFile
 
 
 class TestFile(unittest.TestCase):
@@ -65,7 +66,7 @@ class TestJson(unittest.TestCase):
 
     # Этот метод запускаетсья ПЕРЕД каждой функции теста
     def setUp(self) -> None:
-        self.testClassJson = Json("test.json")
+        self.testClassJson = JsonFile("test.json")
         self.testClassJson.deleteFile()
         self.testClassJson.createFileIfDoesntExist()
 
@@ -161,6 +162,82 @@ class TestJson(unittest.TestCase):
 
     def __del__(self):
         self.testClassJson.deleteFile()
+
+
+class TestCsvFile(unittest.TestCase):
+
+    def setUp(self):
+        self.cvs_file = CsvFile("test.csv")
+
+    def test_init_(self):
+        # Реакция на некоректное им файла
+        self.assertRaises(ValueError, CsvFile, "test.txt")
+
+    def test_writeFile_and_readFile(self):
+        # Проверка записи и чтения данных cvs файла
+        self.cvs_file.writeFile(
+            [[1, 23, 41, 5],
+             [21, 233, 46, 35],
+             [13, 233, 26, 45],
+             [12, 213, 43, 56]]
+
+            , FlagDataConferToStr=True, header=("Даннык", "Data", "Числа", "Num"))
+
+        #  Тест на чтение Cvs файла
+        self.assertEqual(self.cvs_file.readFile(),
+                         [['Даннык', 'Data', 'Числа', 'Num'], ['1', '23', '41', '5'], ['21', '233', '46', '35'],
+                          ['13', '233', '26', '45'], ['12', '213', '43', '56']])
+
+        #  Тест на чтение cvs файла с убранами заголовками
+        self.assertEqual(self.cvs_file.readFile(miss_get_head=True),
+                         [['1', '23', '41', '5'], ['21', '233', '46', '35'],
+                          ['13', '233', '26', '45'], ['12', '213', '43', '56']])
+
+        # Тест на личит чтнеия
+        self.assertEqual(self.cvs_file.readFile(limit=2),
+                         [['Даннык', 'Data', 'Числа', 'Num'], ['1', '23', '41', '5']])
+
+        #  Тест на привышающий лимит чтения
+        self.assertEqual(self.cvs_file.readFile(limit=1123),
+                         [['Даннык', 'Data', 'Числа', 'Num'], ['1', '23', '41', '5'], ['21', '233', '46', '35'],
+                          ['13', '233', '26', '45'], ['12', '213', '43', '56']])
+
+        #  Тест на чтение в обратном порядке
+        self.assertEqual(self.cvs_file.readFileRevers(),
+                         [['12', '213', '43', '56'], ['13', '233', '26', '45'], ['21', '233', '46', '35'],
+                          ['1', '23', '41', '5'], ['Даннык', 'Data', 'Числа', 'Num']])
+
+        # Тест на лимит чтени в обратном порядке
+        self.assertEqual(self.cvs_file.readFileRevers(limit=2), [['12', '213', '43', '56'], ['13', '233', '26', '45']])
+
+        #  Тест на привышающий лимит чтения в обратном порядке
+        self.assertEqual(self.cvs_file.readFileRevers(limit=111),
+                         [['12', '213', '43', '56'], ['13', '233', '26', '45'], ['21', '233', '46', '35'],
+                          ['1', '23', '41', '5'], ['Даннык', 'Data', 'Числа', 'Num']])
+
+        self.cvs_file.deleteFile()
+
+    def test_appendFile(self):
+        # проверка дозаписи в файл
+        self.cvs_file.deleteFile()
+
+        # Провекра записи с флагом FlagDataConferToStr
+        self.cvs_file.writeFile(
+            [[1, 23, 41, 5],
+             [21, 233, 46, 35],
+             [13, 233, 26, 45],
+             [12, 213, 43, 56]]
+
+            , FlagDataConferToStr=True, header=("Даннык", "Data", "Числа", "Num"))
+
+        self.cvs_file.appendFile([['2323', '23233', '23']])
+
+        self.assertEqual(self.cvs_file.readFile(),
+                         [['Даннык', 'Data', 'Числа', 'Num'], ['1', '23', '41', '5'], ['21', '233', '46', '35'],
+                          ['13', '233', '26', '45'], ['12', '213', '43', '56'], ['2323', '23233', '23']])
+
+    def __del__(self):
+        self.cvs_file.deleteFile()
 
 
 if __name__ == '__main__':
