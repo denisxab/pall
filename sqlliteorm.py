@@ -233,7 +233,6 @@ class SqlLiteQrm:
                     "DROP TABLE IF EXISTS {0}".format(name_tables))  # Удалить таблицу если она существует
 
     def CreateTable(self, name_table: str, data: Union[str, Dict]):  # +
-
         # Конвертация типов в str
         res: str = ""
         if type(data) == str:
@@ -251,7 +250,8 @@ class SqlLiteQrm:
             connection.cursor().execute("CREATE TABLE IF NOT EXISTS {0} {1}".format(name_table, res))
 
     def ExecuteTable(self, name_table: str,
-                     data: Union[str, List[Union[str, bytes, int, float]],
+                     data: Union[str, int, float,
+                                 List[Union[str, bytes, int, float]],
                                  Tuple,
                                  Dict[str, Union[str, bytes, int, float]]],
                      sqlRequest: str = "",
@@ -264,23 +264,24 @@ class SqlLiteQrm:
         :param CheckBLOB: проверка стурктуры на анличие бинарных бинырных данных и перевод их  в sqlite3.Binary()
         :return:
         """
+
+        # Создать тест на проверку одной запи
         request: str = "INSERT INTO {0}".format(name_table)
 
         if sqlRequest:  # для вложенных запрсов
             request += " {0}".format(sqlRequest)
-            data = None
+            data = None  # Сделать тест провреки вставки данных
 
         else:
-            if type(data) == str:  # Для SQL команд
-                if data.find("bytes") != -1:
+            if type(data) in (int, float, str):  # Для SQL команд
+                if type(data) == str and data.find("bytes") != -1:
                     raise TypeError(
                         "Нельзя отпраять BLOB в формате строки. Воспользуйтесь добавление данных через list")
-                request += " {0} VALUES {1}".format(tuple(self.header_table[name_table].keys()), data)
+                request += " ('{0}') VALUES ({1})".format("', '".join(self.header_table[name_table].keys()), data)
                 data = None
 
             else:  # Для структур данных
                 res: str = ', '.join('?' * len(data))
-
                 # Конвертация типа в dict в SQL запрос
                 if type(data) == dict:
                     if tuple(data.keys() - self.header_table[name_table].keys()):
@@ -336,16 +337,16 @@ class SqlLiteQrm:
 
         # Для получения имен параметров name_head_data
         if not head_data:
-            head_data = tuple(self.header_table[name_table].keys())
+            head_data = tuple(self.header_table[name_table].keys())  # "', '".join(self.header_table[name_table].keys())
 
         # Нахождение в массиве данных типа bytes и перевод их через sqlite3.Binary()
         if CheckBLOB:
             data = self.__CheackBlob(data)
 
         res: str = ', '.join('?' * (len(head_data)))
-        request: str = "INSERT INTO {nt} {name_arg} VALUES ({values})".format(nt=name_table,
-                                                                              name_arg=head_data,
-                                                                              values=res)
+        request: str = "INSERT INTO {nt} ('{name_arg}') VALUES ({values})".format(nt=name_table,
+                                                                                  name_arg="', '".join(head_data),
+                                                                                  values=res)
         with sqlite3.connect(self.name_db) as connection:
             cursor = connection.cursor()
             cursor.executemany(request, data)
@@ -361,7 +362,7 @@ class SqlLiteQrm:
                 cursor = connection.cursor()
                 cursor.execute(ae, tuple(dict_x.values()))
 
-    def HeadTable(self, name_table, width_table) -> str:
+    def HeadTable(self, name_table, width_table: int = 10) -> str:
         res = self.__print_table(name_table, ", ".join(self.header_table[name_table].keys()),
                                  [[str(x) for x in self.header_table[name_table].values()]], width_table)
 

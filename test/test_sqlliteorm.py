@@ -1,7 +1,6 @@
 import unittest
 from os import path, listdir
 from os.path import getsize
-from sqlite3 import OperationalError
 
 from file import TxtFile
 from sqlliteorm import SqlLiteQrm, sqn
@@ -141,9 +140,9 @@ class TestSqlLite(unittest.TestCase):
         self.assertEqual(self.sq.GetTable(self.name_table)[0], test_data)
         self.sq.DeleteTable(self.name_table)
         # Через SQL запрос
-        self.sq.CreateTable(self.name_table, test_header)
-        self.sq.ExecuteTable(self.name_table, "('2006-01-05','BUY','RAT',100,35.14)")
-        self.assertEqual(self.sq.GetTable(self.name_table)[0], test_data)
+        self.sq.CreateTable(self.name_table, {"id_like": int})
+        self.sq.ExecuteTable(self.name_table, 2323)
+        self.assertEqual(self.sq.GetTable(self.name_table)[0][0], 2323)
         self.sq.DeleteTable(self.name_table)
 
     def test_ExecuteTable_Blob(self):
@@ -201,12 +200,6 @@ class TestSqlLite(unittest.TestCase):
 
         self.assertRaises(IndexError, self.sq.ExecuteTable, self.name_table,
                           ('2006-01-05', 'BUY', 35.14, 100010001))  # Маленькая длины tuple,list
-
-        self.assertRaises(OperationalError, self.sq.ExecuteTable, self.name_table,
-                          "('2006-01-05','Вредное слово','BUY','RAT',100,35.14)")  # Привышение длины для str
-
-        self.assertRaises(OperationalError, self.sq.ExecuteTable, self.name_table,
-                          "('2006-01-05','Вредное слово',100,35.14)")  # Маленькая длины для str
 
     def test_DeleteDb(self):
         # Провекра удаления Бд
@@ -529,6 +522,20 @@ class TestSqlLite(unittest.TestCase):
         self.sq.CreateTable(self.name_table, {"id": int, "name": str, "old": int})
         self.sq.HeadTable(self.name_table, 1)
         # print(self.sq.HeadTable(self.name_table, 15)
+
+    def test_Execute_ALL(self):
+        # Проверка того чтоя не изменил строчку которая коректно подстовляет именна SQL запросы
+        # request += " ('{0}') VALUES ({1})".format("', '".join(self.header_table[name_table].keys()), res)
+
+        self.sq.CreateTable(self.name_table, {'id_user': int})
+        data = [[56654639], [236880983], [248579230], [248968841], [388967786], [410456140], [77708645], [132058482],
+                [136393787], [144827581], [155823759], [171079623], [526765559]]
+        self.sq.ExecuteManyTable(self.name_table, data)
+
+        self.assertEqual(self.sq.GetTable(self.name_table),
+                         [(56654639,), (236880983,), (248579230,), (248968841,), (388967786,), (410456140,),
+                          (77708645,), (132058482,), (136393787,), (144827581,), (155823759,), (171079623,),
+                          (526765559,)])
 
     def test_SaveDbToFile_ReadFileToDb(self):
         # # ExecuteManyTable запись BLOB и проврека CheckBLOB
