@@ -307,7 +307,7 @@ class TestSqlLite(unittest.TestCase):
              (5, 'Svetha', 24, 'None')])  # До 4 с интервалам 2
 
         self.assertEqual(self.sq.SearchColumn(self.name_table, "*", sqlWHERE="old > 20", sqlORDER_BY=sqn.order_by("id"),
-                                              sqlLIMIT=sqn.limit(4, 2), FlagReturnSqlRequest=True),
+                                              sqlLIMIT=sqn.limit(4, 2), ReturnSqlRequest=True),
                          'SELECT * FROM stocks WHERE old > 20 ORDER BY id ASC LIMIT 4 OFFSET 2')
 
     def test_ExecuteManyTable_and_sqlJOIN(self):

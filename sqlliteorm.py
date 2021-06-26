@@ -223,16 +223,14 @@ class SqlLiteQrm:
                 if self.header_table.get(item):
                     self.header_table.pop(item)
                 with sqlite3.connect(self.name_db) as connection:
-                    cursor = connection.cursor()
-                    cursor.execute(
-                        "DROP TABLE IF EXISTS {0};".format(item))  # Удалить таблицу если она существует
-
+                    connection.cursor().execute(
+                        "DROP TABLE IF EXISTS {0}".format(item))  # Удалить таблицу если она существует
         else:
             if self.header_table.get(name_tables):
                 self.header_table.pop(name_tables)
             with sqlite3.connect(self.name_db) as connection:
-                cursor = connection.cursor()
-                cursor.execute("DROP TABLE IF EXISTS {0};".format(name_tables))  # Удалить таблицу если она существует
+                connection.cursor().execute(
+                    "DROP TABLE IF EXISTS {0}".format(name_tables))  # Удалить таблицу если она существует
 
     def CreateTable(self, name_table: str, data: Union[str, Dict]):  # +
 
@@ -244,16 +242,13 @@ class SqlLiteQrm:
 
         elif type(data) == dict:
             res = toSqlRequest(data)
-
             for k, v in data.items():
                 data[k] = (v, "") if type(v) != tuple else v
-
             self.header_table[name_table] = data
 
         # Создание таблицы
         with sqlite3.connect(self.name_db) as connection:
-            cursor = connection.cursor()
-            cursor.execute("CREATE TABLE IF NOT EXISTS {0} {1}".format(name_table, res))
+            connection.cursor().execute("CREATE TABLE IF NOT EXISTS {0} {1}".format(name_table, res))
 
     def ExecuteTable(self, name_table: str,
                      data: Union[str, List[Union[str, bytes, int, float]],
@@ -411,9 +406,11 @@ class SqlLiteQrm:
                      sqlGROUPBY: sqn.group_by = "",
                      sqlORDER_BY: sqn.order_by = "",
                      sqlLIMIT: sqn.limit = "",
-                     FlagPrint: int = 0,
-                     FlagReturnSqlRequest: bool = False
-                     ) -> Union[List[tuple], str]:  # +
+                     #
+                     ReturnSqlRequest: bool = False,
+                     SaveReturnDataInNameTable: str = '',
+                     FlagPrint: int = 0
+                     ) -> Union[str, list]:  # +
         """
         :param name_table: Название таблицы
         :param sqlSelect: sqn.select :Union[str, Tuple]
@@ -423,8 +420,9 @@ class SqlLiteQrm:
         :param sqlGROUPBY:  sqn.group_by :Union[str, Tuple]
         :param sqlORDER_BY: sqn.order_by :str
         :param sqlLIMIT:sqn.limit :int
+        :param ReturnSqlRequest: Вернет сформированный SQL запрос
+        :param SaveReturnDataInNameTable: Сохранить результат поиска в указанный JSON фйал
         :param FlagPrint: Отобразить в консоли
-        :param FlagReturnSqlRequest: Вернет сформированный SQL запрос
         :return:
         """
         """
@@ -457,20 +455,28 @@ class SqlLiteQrm:
         if sqlLIMIT:
             request += sqlLIMIT
 
-        if FlagReturnSqlRequest:
+        if ReturnSqlRequest:
             return request
 
         else:
             with sqlite3.connect(self.name_db) as connection:
                 cursor = connection.cursor()
                 cursor.execute(request)
+
+                if SaveReturnDataInNameTable:
+                    pass
+
+                    # for it in cursor:
+                    #     tmp_json.appendJsonListFile(it)
+                    #
+                    # return []
+
                 res = cursor.fetchall()
 
             if FlagPrint:
                 if sqlSelect == "*":
                     sqlSelect = ", ".join(self.header_table[name_table].keys())
                 print(self.__print_table(name_table, sqlSelect, res, FlagPrint))
-
             return res
 
     def __print_table(self, name_table: str,
