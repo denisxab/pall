@@ -291,7 +291,7 @@ class SqlLiteQrm:
                     if tuple(data.keys() - self.header_table[name_table].keys()):
                         raise IndexError("Именя переданного столбца неуществует")
 
-                    request += " {0} VALUES ({1})".format(tuple(data.keys()), res)
+                    request += " ('{0}') VALUES ({1})".format("', '".join(data.keys()), res)
 
                     if CheckBLOB:
                         data = list(data.values())
@@ -307,7 +307,7 @@ class SqlLiteQrm:
                     if len(data) != len(self.header_table[name_table]):
                         raise IndexError("Разное колличество столбцов таблицы и входных данных")
 
-                    request += " {0} VALUES ({1})".format(tuple(self.header_table[name_table].keys()), res)
+                    request += " ('{0}') VALUES ({1})".format("', '".join(self.header_table[name_table].keys()), res)
 
             with sqlite3.connect(self.name_db) as connection:
                 cursor = connection.cursor()
@@ -326,8 +326,8 @@ class SqlLiteQrm:
 
     def ExecuteManyTable(self, name_table: str,
                          data: List[Union[List[Union[str, bytes, Binary, int, float]], Tuple]],
-                         CheckBLOB: bool = False,
-                         head_data: Union[List[str],Tuple] = None
+                         head_data: Union[List[str], Tuple] = None,
+                         CheckBLOB: bool = False
                          ):  # +
         """
         :param name_table:
@@ -597,7 +597,7 @@ if __name__ == '__main__':
         ["Maer", b'424'],
         ["Skoda", b"122"]
     ]
-    sq.ExecuteManyTable(name_table, cars, countNull=1, CheckBLOB=True)
+    sq.ExecuteManyTable(name_table, cars, head_data=("model", "price"), CheckBLOB=True)
 
     with sqlite3.connect('example.db') as connection:
         for sql in connection.iterdump():
