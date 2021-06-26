@@ -201,6 +201,29 @@ class TestSqlLite(unittest.TestCase):
         self.assertRaises(IndexError, self.sq.ExecuteTable, self.name_table,
                           ('2006-01-05', 'BUY', 35.14, 100010001))  # Маленькая длины tuple,list
 
+    def test_ExecuteTable_sqlRequest(self):
+        # Проверка добовления данных ExecuteTable через ReturnSqlRequest
+        self.sq.CreateTable(self.name_table,
+                            {"id": int,
+                             "old": int
+                             })
+        test_table: str = 'test_table'
+        self.sq.CreateTable(test_table,
+                            {"old": int})
+
+        self.sq.ExecuteManyTable(self.name_table,
+                                 [[11, 24],
+                                  [22, 31],
+                                  [2312, 312],
+                                  [231, 68],
+                                  [344, 187]])
+
+        resSQL = self.sq.SearchColumn(self.name_table, sqn.select('id'),
+                                      sqlWHERE="id < 30",
+                                      ReturnSqlRequest=True)
+        self.sq.ExecuteTable(test_table, sqlRequest=resSQL)
+        self.assertEqual(self.sq.GetTable(test_table), [(11,), (22,)])
+
     def test_DeleteDb(self):
         # Провекра удаления Бд
         test_header = {"date": str, "trans": str, "symbol": str, "qty": float, "price": float}

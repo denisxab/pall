@@ -253,7 +253,7 @@ class SqlLiteQrm:
                      data: Union[str, int, float,
                                  List[Union[str, bytes, int, float]],
                                  Tuple,
-                                 Dict[str, Union[str, bytes, int, float]]],
+                                 Dict[str, Union[str, bytes, int, float]]] = None,
                      sqlRequest: str = "",
                      CheckBLOB: bool = False
                      ):  # +
@@ -305,9 +305,9 @@ class SqlLiteQrm:
 
                     request += " ('{0}') VALUES ({1})".format("', '".join(self.header_table[name_table].keys()), res)
 
-            with sqlite3.connect(self.name_db) as connection:
-                cursor = connection.cursor()
-                cursor.execute(request, data) if data else cursor.execute(request)
+        with sqlite3.connect(self.name_db) as connection:
+            cursor = connection.cursor()
+            cursor.execute(request, data) if data else cursor.execute(request)
 
     def __CheackBlob(self, data: List[Union[List[Union[str, bytes, Binary, int, float]], Tuple]]) -> \
             List[Union[List[Union[str, bytes, Binary, int, float]], Tuple]]:
@@ -409,7 +409,6 @@ class SqlLiteQrm:
                      sqlLIMIT: sqn.limit = "",
                      #
                      ReturnSqlRequest: bool = False,
-                     SaveReturnDataInNameTable: str = '',
                      FlagPrint: int = 0
                      ) -> Union[str, list]:  # +
         """
@@ -422,7 +421,6 @@ class SqlLiteQrm:
         :param sqlORDER_BY: sqn.order_by :str
         :param sqlLIMIT:sqn.limit :int
         :param ReturnSqlRequest: Вернет сформированный SQL запрос
-        :param SaveReturnDataInNameTable: Сохранить результат поиска в указанный JSON фйал
         :param FlagPrint: Отобразить в консоли
         :return:
         """
@@ -463,14 +461,6 @@ class SqlLiteQrm:
             with sqlite3.connect(self.name_db) as connection:
                 cursor = connection.cursor()
                 cursor.execute(request)
-
-                if SaveReturnDataInNameTable:
-                    pass
-
-                    # for it in cursor:
-                    #     tmp_json.appendJsonListFile(it)
-                    #
-                    # return []
 
                 res = cursor.fetchall()
 
