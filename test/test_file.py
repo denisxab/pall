@@ -236,6 +236,74 @@ class TestCsvFile(unittest.TestCase):
                          [['Даннык', 'Data', 'Числа', 'Num'], ['1', '23', '41', '5'], ['21', '233', '46', '35'],
                           ['13', '233', '26', '45'], ['12', '213', '43', '56'], ['2323', '23233', '23']])
 
+    def test_ordinary(self):
+        # Тест записи Однмерного массива
+        self.cvs_file.deleteFile()
+        self.cvs_file.writeFile([123, 123, 222, 1, 312, 223, 2], FlagDataConferToStr=True)
+        self.cvs_file.writeFile([123, 123, 222, 1, 2], FlagDataConferToStr=True)
+        self.cvs_file.writeFile([123, 123, '222', 1], FlagDataConferToStr=True)
+        self.cvs_file.writeFile([123, 222, 1, 2])
+
+        self.cvs_file.appendFile([123, 123, 222, 1, 312, 223, 2], FlagDataConferToStr=True)
+        self.cvs_file.appendFile([123, 123, 222, 1, 2], FlagDataConferToStr=True)
+        self.cvs_file.appendFile([123, 123, '222', 1], FlagDataConferToStr=True)
+        self.cvs_file.appendFile([123, 222, 1, 2])
+
+        # Тест записи дмумерного массива
+        self.cvs_file.deleteFile()
+        self.cvs_file.writeFile(
+            [[123, 123, 222, 1, 312, 223, 2],
+             [4123, 1233, 222, 1, 3312, 223, 2],
+             ]
+            , FlagDataConferToStr=True)
+        self.cvs_file.writeFile(
+            [[123, 123, 222, 1, 312, 223, 2],
+             [4123, 1233, '222', 1, 3312, 223, 2],
+             ], FlagDataConferToStr=True)
+
+        self.cvs_file.writeFile(
+            [[123, 123, 222, 1, 312, 223, 2],
+             [4123, 1233, 222, 1, 3312, 223, 2],
+             ])
+
+        self.cvs_file.appendFile(
+            [[123, 123, 222, 1, 312, 223, 2],
+             [4123, 1233, 222, 1, 3312, 223, 2],
+             ]
+            , FlagDataConferToStr=True)
+        self.cvs_file.appendFile(
+            [[123, 123, 222, 1, 312, 223, 2],
+             [4123, 1233, '222', 1, 3312, 223, 2],
+             ], FlagDataConferToStr=True)
+
+        self.cvs_file.appendFile(
+            [[123, 123, 222, 1, 312, 223, 2],
+             [4123, 1233, 222, 1, 3312, 223, 2],
+             ])
+
+        # Тест Записи Float
+        self.cvs_file.writeFile([123.12, 123.43, 222.2, 1.5, 31.2, 22.3, 2.5], FlagDataConferToStr=True)
+        self.assertEqual(
+            self.cvs_file.readFile(),
+            [['123.12', '123.43', '222.2', '1.5', '31.2', '22.3', '2.5']])
+
+        # Тест записи комберированно
+        self.cvs_file.writeFile([12, 123.43, 'Hello Привет', '1.5', 31.2, 22.3, 2.5], FlagDataConferToStr=True),
+        self.assertEqual(
+            self.cvs_file.readFile(),
+            [['12', '123.43', 'Hello Привет', '1.5', '31.2', '22.3', '2.5']])
+
+        # Тест Записи Float
+        self.cvs_file.writeFile([123.12, 123.43, 222.2, 1.5, 31.2, 22.3, 2.5]),
+        self.assertEqual(self.cvs_file.readFile(),
+                         [['123.12', '123.43', '222.2', '1.5', '31.2', '22.3', '2.5']])
+
+        # Тест записи комберированно
+        self.cvs_file.writeFile([12, 123.43, 'Hello Привет', '1.5', 31.2, 22.3, 2.5]),
+        self.assertEqual(self.cvs_file.readFile(),
+                         [['12', '123.43', 'Hello Привет', '1.5', '31.2', '22.3', '2.5']])
+
+
     def __del__(self):
         self.cvs_file.deleteFile()
 

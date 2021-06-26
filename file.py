@@ -122,7 +122,8 @@ class CsvFile(File):
                     res.append(row)
         return res
 
-    def writeFile(self, data: List[List[Union[str, int]]],
+    def writeFile(self, data: Union[List[Union[str, int, float]],
+                                    List[List[Union[str, int, float]]]],
                   header: tuple = None,
                   FlagDataConferToStr: bool = False,
                   encoding: str = "utf-8",
@@ -131,7 +132,7 @@ class CsvFile(File):
         """
         :param data:
         :param header: Эти даныне будут заголовками
-        :param FlagDataConferToStr: Первеодит все данные в формат str
+        :param FlagDataConferToStr: Переводит все данные в формат str
         :param encoding: open()
         :param newline: open()
         """
@@ -139,11 +140,20 @@ class CsvFile(File):
             writer = csv.writer(f)
             if header:  # Запись заголовка
                 writer.writerow(header)
-            if FlagDataConferToStr:
-                data = [[str(n) for n in m] for m in data]
-            writer.writerows(data)
 
-    def appendFile(self, data: List[List[Union[str, int]]],
+            if FlagDataConferToStr:
+                if type(data[0]) != list:
+                    data = [str(n) for n in data]
+                else:
+                    data = [[str(n) for n in m] for m in data]
+
+            if type(data[0]) != list:
+                writer.writerow(data)
+            else:
+                writer.writerows(data)
+
+    def appendFile(self, data: Union[List[Union[str, int, float]],
+                                     List[List[Union[str, int, float]]]],
                    FlagDataConferToStr: bool = False,
                    encoding: str = "utf-8",
                    newline: str = ""
@@ -151,8 +161,15 @@ class CsvFile(File):
         with open(self.nameFile, "a", encoding=encoding, newline=newline) as f:
             writer = csv.writer(f)
             if FlagDataConferToStr:
-                data = [[str(n) for n in m] for m in data]
-            writer.writerows(data)
+                if type(data[0]) != list:
+                    data = [str(n) for n in data]
+                else:
+                    data = [[str(n) for n in m] for m in data]
+
+            if type(data[0]) != list:
+                writer.writerow(data)
+            else:
+                writer.writerows(data)
 
 
 class TxtFile(File):
@@ -260,7 +277,6 @@ class JsonFile(File):
                 self.writeJsonFile(tmp_data, lang)
         else:
             raise TypeError("Тип даннных в файле и тип входных данных раличны")
-
 
 
 if __name__ == '__main__':
