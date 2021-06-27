@@ -403,7 +403,6 @@ class SqlLiteQrm:
                      sqlSelect: sqn.select,
                      sqlJOIN: sqn.InnerJoin = "",  # [List[str],List[Union[str,List]]] = "",
                      sqlWHERE: str = "",
-                     sqlLIKE: str = "",
                      sqlGROUPBY: sqn.group_by = "",
                      sqlORDER_BY: sqn.order_by = "",
                      sqlLIMIT: sqn.limit = "",
@@ -416,7 +415,6 @@ class SqlLiteQrm:
         :param sqlSelect: sqn.select :Union[str, Tuple]
         :param sqlJOIN: sqn.InnerJoin||LeftJoin :Union[str, Tuple]
         :param sqlWHERE: условие
-        :param sqlLIKE:
         :param sqlGROUPBY:  sqn.group_by :Union[str, Tuple]
         :param sqlORDER_BY: sqn.order_by :str
         :param sqlLIMIT:sqn.limit :int
@@ -439,11 +437,6 @@ class SqlLiteQrm:
 
         if sqlWHERE:
             request += " WHERE {0}".format(sqlWHERE)
-
-        if sqlLIKE:
-            # % любое продолжение строк
-            # _ любой один симвл
-            request += " LIKE '{0}'".format(sqlLIKE)
 
         if sqlGROUPBY:
             request += sqlGROUPBY
@@ -502,14 +495,13 @@ class SqlLiteQrm:
                       name_column: Union[str, List[str]],
                       new_data: Union[str, bytes, int, float, List[Union[str, bytes, int, float]]],
                       sqlWHERE: str = "",
-                      sqlLIKE: str = ""):
+                      ):
         """
         Обновлени данных в стобцах
         :param name_table: Название таблицы
         :param name_column: Название столбца котроый будет выбора
         :param new_data: Новое значение у столбцов
         :param sqlWHERE: Условие SQL полсе WHERE
-        :param sqlLIKE: Шаблон SQL посе LIKE
         """
 
         request: str = "UPDATE {0} SET ".format(name_table)
@@ -528,10 +520,8 @@ class SqlLiteQrm:
 
         if sqlWHERE:
             request += " WHERE {0}".format(sqlWHERE)
-        if sqlLIKE:
-            # % любое продолжение строк
-            # _ любой один симвл
-            request += " LIKE '{0}'".format(sqlLIKE)
+
+
 
         with sqlite3.connect(self.name_db) as connection:
             cursor = connection.cursor()

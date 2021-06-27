@@ -481,7 +481,7 @@ class TestSqlLite(unittest.TestCase):
                                                        {"name": "Patio", "old": 231, "sex": 21},
                                                        {"name": "Pvetha", "old": 24}])
 
-        self.sq.UpdateColumne(self.name_table, 'old', 99, "name", "P%")
+        self.sq.UpdateColumne(self.name_table, 'old', 99, "name LIKE 'P%'")
         self.assertEqual(self.sq.GetTable(self.name_table),
                          [(1, 'Denis', 21, 'None'), (2, 'Katy', 221, '1'), (3, 'Mush', 321, '21'),
                           (4, 'Patio', 99, '21'), (5, 'Pvetha', 99, 'None')])
