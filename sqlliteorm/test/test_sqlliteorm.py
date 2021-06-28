@@ -156,7 +156,7 @@ class TestSqlLite(unittest.TestCase):
         self.sq.DeleteTable(self.name_table)
 
         # Проверка попытки записи типа BLOB через строку -> должны быть ошибка TypeError
-        test_header = {"str": toTypeSql(str), "int": toTypeSql(int), "float": toTypeSql(float), "bytes": toTypeSql(bytes)}
+        # test_header = {"str": toTypeSql(str), "int": toTypeSql(int), "float": toTypeSql(float), "bytes": toTypeSql(bytes)}
         test_data = "('text', '123', '122.32', '{0}')".format(b"0101")
         self.sq.CreateTable(self.name_table, "(str TEXT, int INTEGER, float REAL, bytes BLOB)")
 
@@ -211,9 +211,8 @@ class TestSqlLite(unittest.TestCase):
                                   [231, 68],
                                   [344, 187]])
 
-        resSQL = self.sq.SearchColumn(self.name_table, select('id'),
-                                      sqlWHERE="id < 30",
-                                      ReturnSqlRequest=True)
+        resSQL = Select(self.name_table, "id").Where("id < 30").Request
+
         self.sq.ExecuteTable(test_table, sqlRequest=resSQL)
         self.assertEqual(self.sq.GetTable(test_table), [(11,), (22,)])
 
@@ -235,35 +234,35 @@ class TestSqlLite(unittest.TestCase):
         self.assertEqual(self.sq.GetTable(self.name_table), [(nf, getsize(nf)) for nf in listdir("D:") if
                                                              len(nf.split(".")) == 2 and nf.split(".")[1] == "py"])
 
-    def test_ObjSearch(self):
-        # Проврека функции поиска ObjSearch obj_Select SqlDataClass
+    def test_Search(self):
+        # Проврека функции поиска Search obj_Select SqlDataClass
 
         # Проверка Формирование запросов
-        self.assertEqual(ObjSelect("table", "id", "name", "address").reqSql, 'SELECT id, name, address FROM table')
-        self.assertEqual(ObjSelect("table", "*").reqSql, 'SELECT * FROM table')
-        self.assertEqual(ObjSelect("table", "id", "name", "address").Where("id == 10").reqSql,
+        self.assertEqual(Select("table", "id", "name", "address").Request, 'SELECT id, name, address FROM table')
+        self.assertEqual(Select("table", "*").Request, 'SELECT * FROM table')
+        self.assertEqual(Select("table", "id", "name", "address").Where("id == 10").Request,
                          'SELECT id, name, address FROM table WHERE id == 10')
-        self.assertEqual(ObjSelect("table", "id", "name", "address").Where("id == 10").Limit(10).reqSql,
+        self.assertEqual(Select("table", "id", "name", "address").Where("id == 10").Limit(10).Request,
                          'SELECT id, name, address FROM table WHERE id == 10 LIMIT 10 OFFSET 0')
-        self.assertEqual(ObjSelect("table", "id", "name", "address").Where("id == 10").Limit(10, 1).reqSql,
+        self.assertEqual(Select("table", "id", "name", "address").Where("id == 10").Limit(10, 1).Request,
                          'SELECT id, name, address FROM table WHERE id == 10 LIMIT 10 OFFSET 1')
-        self.assertEqual(ObjSelect("table", "id", "name", "address").Where("id == 10").GroupBy("id").reqSql,
+        self.assertEqual(Select("table", "id", "name", "address").Where("id == 10").GroupBy("id").Request,
                          'SELECT id, name, address FROM table WHERE id == 10 GROUP BY id')
-        self.assertEqual(ObjSelect("table", "id", "name", "address").Where("id == 10").GroupBy("id", "name").reqSql,
+        self.assertEqual(Select("table", "id", "name", "address").Where("id == 10").GroupBy("id", "name").Request,
                          'SELECT id, name, address FROM table WHERE id == 10 GROUP BY id, name')
         self.assertEqual(
-            ObjSelect("table", "id", "name", "address").Where("id >= 10").GroupBy("id", "name").Limit(10).reqSql,
+            Select("table", "id", "name", "address").Where("id >= 10").GroupBy("id", "name").Limit(10).Request,
             'SELECT id, name, address FROM table WHERE id >= 10 GROUP BY id, name LIMIT 10 OFFSET 0')
-        self.assertEqual(ObjSelect("table", "id", "name", "address").Where("id != 10").OrderBy("id").reqSql,
+        self.assertEqual(Select("table", "id", "name", "address").Where("id != 10").OrderBy("id").Request,
                          'SELECT id, name, address FROM table WHERE id != 10 ORDER BY id ASC')
-        self.assertEqual(ObjSelect("table", "id", "name", "address").Where("id <= 10").OrderBy("id").Limit(5).reqSql,
+        self.assertEqual(Select("table", "id", "name", "address").Where("id <= 10").OrderBy("id").Limit(5).Request,
                          'SELECT id, name, address FROM table WHERE id <= 10 ORDER BY id ASC LIMIT 5 OFFSET 0')
         self.assertEqual(
-            ObjSelect("table", "id", "name", "address").Join("new_table", "id.table == id.new_table").Where(
-                "id <= 10").OrderBy("id").Limit(5).reqSql,
-            'SELECT id, name, address FROM tableINNER JOIN new_table ON id.table == id.new_table WHERE id <= 10 ORDER BY id ASC LIMIT 5 OFFSET 0')
+            Select("table", "id", "name", "address").Join("new_table", "id.table == id.new_table").Where(
+                "id <= 10").OrderBy("id").Limit(5).Request,
+            'SELECT id, name, address FROM table INNER JOIN new_table ON id.table == id.new_table WHERE id <= 10 ORDER BY id ASC LIMIT 5 OFFSET 0')
 
-        self.assertRaises(ValueError, ObjSelect, "*")
+        self.assertRaises(ValueError, Select, "*")
 
         # Прворека поиска в тестовой бд
         self.sq.CreateTable(self.name_table,
@@ -275,30 +274,30 @@ class TestSqlLite(unittest.TestCase):
                                       {"name": "Svetha", "old": 24}]
                                      )
 
-        self.assertEqual(self.sq.ObjSearch(ObjSelect(self.name_table, "name").Where("old == 21")),
+        self.assertEqual(self.sq.Search(Select(self.name_table, "name").Where("old == 21")),
                          [('Denis',), ('Katy',)])
 
-        self.assertEqual(self.sq.ObjSearch(ObjSelect(self.name_table, "name", "sex").Where("old == 21")),
+        self.assertEqual(self.sq.Search(Select(self.name_table, "name", "sex").Where("old == 21")),
                          [('Denis', '_'), ('Katy', '1')])
 
-        self.assertEqual(self.sq.ObjSearch(ObjSelect(self.name_table, "*").Where("old == 21")),
+        self.assertEqual(self.sq.Search(Select(self.name_table, "*").Where("old == 21")),
                          [(1, 'Denis', 21, '_'), (2, 'Katy', 21, '1')])
 
-        self.assertEqual(self.sq.ObjSearch(ObjSelect(self.name_table, "name").Where("old <= 21")),
+        self.assertEqual(self.sq.Search(Select(self.name_table, "name").Where("old <= 21")),
                          [('Denis',), ('Katy',)])
 
-        self.assertEqual(self.sq.ObjSearch(ObjSelect(self.name_table, "name").Where("old < 21")), [])
+        self.assertEqual(self.sq.Search(Select(self.name_table, "name").Where("old < 21")), [])
 
-        self.assertEqual(self.sq.ObjSearch(ObjSelect(self.name_table, "name").Where("old > 21")), [('Svetha',)])
-        self.assertEqual(self.sq.ObjSearch(ObjSelect(self.name_table, "name").Where("old >= 21")),
+        self.assertEqual(self.sq.Search(Select(self.name_table, "name").Where("old > 21")), [('Svetha',)])
+        self.assertEqual(self.sq.Search(Select(self.name_table, "name").Where("old >= 21")),
                          [('Denis',), ('Katy',), ('Svetha',)])
 
         # Проверка FlagPrint Проверять вручнкю
-        # self.sq.ObjSearch(obj_Select(self.name_table, "*"), FlagPrint=10)
-        # self.sq.ObjSearch(obj_Select(self.name_table, "*").Where("old > 21"), FlagPrint=10)
-        # self.sq.ObjSearch(obj_Select(self.name_table, "name"), FlagPrint=12)
-        # self.sq.ObjSearch(obj_Select(self.name_table, "name").Where("old > 21"), FlagPrint=9)
-        # self.sq.ObjSearch(obj_Select(self.name_table, "name", "old"), FlagPrint=11)
+        # self.sq.Search(obj_Select(self.name_table, "*"), FlagPrint=10)
+        # self.sq.Search(obj_Select(self.name_table, "*").Where("old > 21"), FlagPrint=10)
+        # self.sq.Search(obj_Select(self.name_table, "name"), FlagPrint=12)
+        # self.sq.Search(obj_Select(self.name_table, "name").Where("old > 21"), FlagPrint=9)
+        # self.sq.Search(obj_Select(self.name_table, "name", "old"), FlagPrint=11)
 
         self.sq.DeleteTable(self.name_table)
 
@@ -313,17 +312,23 @@ class TestSqlLite(unittest.TestCase):
                                       {"name": "Svetha", "old": 24}]
                                      )
 
-        self.assertEqual(self.sq.SearchColumn(self.name_table, "name", sqlWHERE="old == 21"), [('Denis',), ('Katy',)])
+        self.assertEqual(self.sq.Search(Select(self.name_table, "name").Where("old == 21")),
+                         [('Denis',), ('Katy',)])
 
-        self.assertEqual(self.sq.SearchColumn(self.name_table, select("name", "sex"), sqlWHERE="old == 21"),
+        self.assertEqual(self.sq.Search(Select(self.name_table, "name", "sex").Where("old == 21")),
                          [('Denis', '_'), ('Katy', '1')])
-        self.assertEqual(self.sq.SearchColumn(self.name_table, "*", sqlWHERE="old == 21"),
+
+        self.assertEqual(self.sq.Search(Select(self.name_table, "*").Where("old == 21")),
                          [(1, 'Denis', 21, '_'), (2, 'Katy', 21, '1')])
 
-        self.assertEqual(self.sq.SearchColumn(self.name_table, "name", sqlWHERE="old <= 21"), [('Denis',), ('Katy',)])
-        self.assertEqual(self.sq.SearchColumn(self.name_table, "name", sqlWHERE="old < 21"), [])
-        self.assertEqual(self.sq.SearchColumn(self.name_table, "name", sqlWHERE="old > 21"), [('Svetha',)])
-        self.assertEqual(self.sq.SearchColumn(self.name_table, "name", sqlWHERE="old >= 21"),
+        self.assertEqual(self.sq.Search(Select(self.name_table, "name").Where("old <= 21")),
+                         [('Denis',), ('Katy',)])
+
+        self.assertEqual(self.sq.Search(Select(self.name_table, "name").Where("old < 21")), [])
+
+        self.assertEqual(self.sq.Search(Select(self.name_table, "name").Where("old > 21")), [('Svetha',)])
+
+        self.assertEqual(self.sq.Search(Select(self.name_table, "name").Where("old >= 21")),
                          [('Denis',), ('Katy',), ('Svetha',)])
 
         self.sq.DeleteTable(self.name_table)
@@ -338,15 +343,19 @@ class TestSqlLite(unittest.TestCase):
                                                        {"name": "Patio", "old": 21, "sex": 21},
                                                        {"name": "Svetha", "old": 24}])
 
-        self.assertEqual(self.sq.SearchColumn(self.name_table, "name", sqlWHERE="old == 21 and sex == 21"),
+        self.assertEqual(self.sq.Search(Select(self.name_table, "name").Where("old == 21 and sex == 21")),
                          [('Mush',), ('Patio',)])  # И
-        self.assertEqual(self.sq.SearchColumn(self.name_table, "name", sqlWHERE="old BETWEEN 10 and 21"),
+
+        self.assertEqual(self.sq.Search(Select(self.name_table, "name").Where("old BETWEEN 10 and 21")),
                          [('Denis',), ('Katy',), ('Mush',), ('Patio',)])  # В пределах
-        self.assertEqual(self.sq.SearchColumn(self.name_table, "name", sqlWHERE="old in (24,22)"),
+
+        self.assertEqual(self.sq.Search(Select(self.name_table, "name").Where("old in (24,22)")),
                          [('Svetha',)])  # Содержиться В ()
-        self.assertEqual(self.sq.SearchColumn(self.name_table, "name", sqlWHERE="old == 21 or sex == 1"),
+
+        self.assertEqual(self.sq.Search(Select(self.name_table, "name").Where("old == 21 or sex == 1")),
                          [('Denis',), ('Katy',), ('Mush',), ('Patio',)])  # ИЛИ
-        self.assertEqual(self.sq.SearchColumn(self.name_table, "name", sqlWHERE="old not in (21,24)"),
+
+        self.assertEqual(self.sq.Search(Select(self.name_table, "name").Where("old not in (21,24)")),
                          [])  # Приставка НЕ
         self.sq.DeleteTable(self.name_table)
 
@@ -359,8 +368,9 @@ class TestSqlLite(unittest.TestCase):
                                                        {"name": "Mush", "old": 321, "sex": 21},
                                                        {"name": "Patio", "old": 231, "sex": 21},
                                                        {"name": "Svetha", "old": 24}])
+
         self.assertEqual(
-            self.sq.SearchColumn(self.name_table, "*", sqlWHERE="old > 20", sqlORDER_BY=order_by("old")),
+            self.sq.Search(Select(self.name_table, "*").Where("old > 20").OrderBy("old")),
             [(1, 'Denis', 21, '_'),
              (5, 'Svetha', 24, '_'),
              (2, 'Katy', 221, '1'),
@@ -368,28 +378,29 @@ class TestSqlLite(unittest.TestCase):
              (3, 'Mush', 321, '21')])
 
         # Сортировка ORDER BY ___ [DESC,ASC]
+
         self.assertEqual(
-            self.sq.SearchColumn(self.name_table, "*", sqlWHERE="old > 20", sqlORDER_BY=order_by("id")),
+            self.sq.Search(Select(self.name_table, "*").Where("old > 20").OrderBy("id")),
             [(1, 'Denis', 21, '_'), (2, 'Katy', 221, '1'), (3, 'Mush', 321, '21'),
              (4, 'Patio', 231, '21'), (5, 'Svetha', 24, '_')])
+
         self.assertEqual(
-            self.sq.SearchColumn(self.name_table, "*", sqlWHERE="old > 20", sqlORDER_BY=order_by("-id")),
+            self.sq.Search(Select(self.name_table, "*").Where("old > 20").OrderBy("-id")),
             [(5, 'Svetha', 24, '_'), (4, 'Patio', 231, '21'), (3, 'Mush', 321, '21'),
              (2, 'Katy', 221, '1'), (1, 'Denis', 21, '_')])
 
         # LIMIT
-        self.assertEqual(self.sq.SearchColumn(self.name_table, "*", sqlWHERE="old > 20", sqlORDER_BY=order_by("id"),
-                                              sqlLIMIT=limit(2)),
+        self.assertEqual(self.sq.Search(Select(self.name_table, "*").Where("old > 20").OrderBy("id").Limit(2)),
                          [(1, 'Denis', 21, '_'), (2, 'Katy', 221, '1')])  # До 2
+
         self.assertEqual(
-            self.sq.SearchColumn(self.name_table, "*", sqlWHERE="old > 20", sqlORDER_BY=order_by("id"),
-                                 sqlLIMIT=limit(4, 2)),
+            self.sq.Search(Select(self.name_table, "*").Where("old > 20").OrderBy("id").Limit(4, 2)),
             [(3, 'Mush', 321, '21'), (4, 'Patio', 231, '21'),
              (5, 'Svetha', 24, '_')])  # До 4 с интервалам 2
 
-        self.assertEqual(self.sq.SearchColumn(self.name_table, "*", sqlWHERE="old > 20", sqlORDER_BY=order_by("id"),
-                                              sqlLIMIT=limit(4, 2), ReturnSqlRequest=True),
-                         'SELECT * FROM stocks WHERE old > 20 ORDER BY id ASC LIMIT 4 OFFSET 2')
+        self.assertEqual(
+            Select(self.name_table, "*").Where("old > 20").OrderBy("id").Limit(4, 2).Request,
+            'SELECT * FROM stocks WHERE old > 20 ORDER BY id ASC LIMIT 4 OFFSET 2')
 
     def test_ExecuteManyTable_and_sqlJOIN(self):
         # Проверка когда созданы ДВЕ таблицы и мы проверяем то что заголвки подобрны правильно для заполения
@@ -422,13 +433,13 @@ class TestSqlLite(unittest.TestCase):
                           (2, 23, 33, 1.1), (1, 324, 25, 1.1), (0, 3323, 11, 1.1)])
 
         # Провекра LIMIT у GetTable
-        self.assertEqual(self.sq.GetTable("new", limit(3)),
+        self.assertEqual(self.sq.GetTable("new", LIMIT=(3, 0)),  # Переделать лимит
                          [(0, 3323, 11, 1.1), (0, 21, 11, 1.1), (2, 223, 33, 1.1)])
 
         # Проверка sqlJOIN
         self.assertEqual(
-            self.sq.SearchColumn(self.name_table, sqlSelect=select(f'{self.name_table}.name', "new.many"),
-                                 sqlJOIN=InnerJoin("new", f"{self.name_table}.id =  new.id")),
+            self.sq.Search(Select(self.name_table, f'{self.name_table}.name', "new.many").Join("new",
+                                                                                               f"{self.name_table}.id =  new.id")),
             [('Denis', 21), ('Denis', 3323), ('Denis', 3323), ('Denis', 3323), ('Musha', 21),
              ('Musha', 324), ('Dima', 23), ('Dima', 223)])
 
@@ -599,19 +610,25 @@ class TestSqlLite(unittest.TestCase):
                                                        {"name": "Patio", "old": 231, "sex": 21},
                                                        {"name": "Denis", "old": 24}])
 
-        self.assertEqual(self.sq.SearchColumn(self.name_table, CountSql("sex"), sqlWHERE="old < 25"), [(2,)])
-        self.assertEqual(self.sq.SearchColumn(self.name_table, SumSql("old"), sqlWHERE="old < 25"), [(45,)])
-        self.assertEqual(self.sq.SearchColumn(self.name_table, MaxSql("old"), sqlWHERE="old < 25"), [(24,)])
-        self.assertEqual(self.sq.SearchColumn(self.name_table, MinSql("old"), sqlWHERE="old < 25"), [(21,)])
-        self.assertEqual(self.sq.SearchColumn(self.name_table, AvgSql("old")), [(163.6,)])
+        self.assertEqual(self.sq.Search(Select(self.name_table, CountSql("sex")).Where("old < 25")), [(2,)])
+
+        self.assertEqual(self.sq.Search(Select(self.name_table, SumSql("old")).Where("old < 25")), [(45,)])
+
+        self.assertEqual(self.sq.Search(Select(self.name_table, MaxSql("old")).Where("old < 25")), [(24,)])
+
+        self.assertEqual(self.sq.Search(Select(self.name_table, MinSql("old")).Where("old < 25")), [(21,)])
+
+        self.assertEqual(self.sq.Search(Select(self.name_table, AvgSql("old"))), [(163.6,)])
 
         # Проверка уникального столбца DISTINCT
-        self.assertEqual(self.sq.SearchColumn(self.name_table, CountSql("-name"), sqlWHERE="old < 25"), [(1,)])
+
+        self.assertEqual(self.sq.Search(Select(self.name_table, CountSql("-name")).Where("old < 25")), [(1,)])
         # Проверка sqlGROUPBY
         self.assertEqual(
-            self.sq.SearchColumn(self.name_table, select("name", SumSql("old")), sqlGROUPBY=group_by("name")),
+            self.sq.Search(Select(self.name_table, "name", SumSql("old")).GroupBy("name")),
             [('Denis', 45), ('Katy', 221), ('Mush', 321), ('Patio', 231)])
-        self.assertEqual(self.sq.SearchColumn(self.name_table, select("*"), sqlGROUPBY=group_by("sex", "name")),
+
+        self.assertEqual(self.sq.Search(Select(self.name_table, "*").GroupBy("sex", "name")),
                          [(2, 'Katy', 221, '1'), (3, 'Mush', 321, '21'), (4, 'Patio', 231, '21'),
                           (1, 'Denis', 21, '_')])
 

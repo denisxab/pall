@@ -40,202 +40,80 @@ AvgSql = lambda arg: "avg(DISTINCT {0})".format(arg[1::]) if arg[0] == "-" else 
 MinSql = lambda arg: "min(DISTINCT {0})".format(arg[1::]) if arg[0] == "-" else "min({0})".format(arg)
 MaxSql = lambda arg: "max(DISTINCT {0})".format(arg[1::]) if arg[0] == "-" else "max({0})".format(arg)
 
-# Union[str, Tuple] выбор столбцов
-select = lambda *sel: ', '.join(sel)
 
-# Union[str, Tuple] слиять таблицы
-InnerJoin = lambda name_table, ON: "INNER JOIN {0} ON {1}".format(name_table, ', '.join(ON)) if type(
-    ON) == tuple else "INNER JOIN {0} ON {1}".format(name_table, ON)
 
-# Union[str, Tuple] слиять таблицы даже если они не равны
-LeftJoin = lambda name_table, ON: "LEFT JOIN {0} ON {1}".format(name_table, ', '.join(ON))
-
-# str
-where = lambda condition: " WHERE {0}".format(condition)
-
-# str
-order_by = lambda order: " ORDER BY {0} DESC".format(order[1::]) if order[0] == '-' else ' ORDER BY {0} ASC'.format(
-    order)
-# str
-group_by = lambda *group: " GROUP BY {0}".format(', '.join(group)) if list(
-    filter(lambda it: True if it else False, group)) else ""
+# # Union[str, Tuple] выбор столбцов
+# select = lambda *sel: ', '.join(sel)
+#
+# # Union[str, Tuple] слиять таблицы
+# InnerJoin = lambda name_table, ON: "INNER JOIN {0} ON {1}".format(name_table, ', '.join(ON)) if type(
+#     ON) == tuple else "INNER JOIN {0} ON {1}".format(name_table, ON)
+#
+# # Union[str, Tuple] слиять таблицы даже если они не равны
+# LeftJoin = lambda name_table, ON: "LEFT JOIN {0} ON {1}".format(name_table, ', '.join(ON))
+#
+# # str
+# where = lambda condition: " WHERE {0}".format(condition)
+#
+# # str
+# order_by = lambda order: " ORDER BY {0} DESC".format(order[1::]) if order[0] == '-' else ' ORDER BY {0} ASC'.format(
+#     order)
+# # str
+# group_by = lambda *group: " GROUP BY {0}".format(', '.join(group)) if list(
+#     filter(lambda it: True if it else False, group)) else ""
+#
 
 # int, int
-limit = lambda lim, offset=0: " LIMIT {0} OFFSET {1}".format(lim, offset) if lim else ""
+#limit = lambda lim, offset=0: " LIMIT {0} OFFSET {1}".format(lim, offset) if lim else ""
 
 
-class ObjSelect:
-    """
-    Задача: Составлние SQl запроса поиска в БД через методы классов
-    !!!: Не рекомендуетсья использовать в многопоточном режиме (хотя и в нем работает нормально) используйте SearchColumn
-    """
-    reqSql: str = ""  # Общая переменна которая измемнятьс в obj_Select
 
-    select = lambda sql_select, name_table: 'SELECT {0} FROM {1}'.format(', '.join(sql_select), name_table)
+class Select:
 
-    group_by = lambda group: " GROUP BY {0}".format(', '.join(group)) if list(
-        filter(lambda it: True if it else False, group)) else ""
+    def __init__(self, name_table, *select_arg, req=None):
 
-    where = lambda condition: " WHERE {0}".format(condition)
+        self.select = lambda sql_select, NameTable: 'SELECT {0} FROM {1}'.format(', '.join(sql_select), NameTable)
 
-    limit = lambda lim, offset=0: " LIMIT {0} OFFSET {1}".format(lim, offset) if lim else ""
+        self.group_by = lambda group: " GROUP BY {0}".format(', '.join(group)) if list(
+            filter(lambda it: True if it else False, group)) else ""
 
-    order_by = lambda order: " ORDER BY {0} DESC".format(order[1::]) if order[0] == '-' else ' ORDER BY {0} ASC'.format(
-        order)
+        self.where = lambda condition: f" WHERE {condition}"
 
-    def __init__(self, name_table, *select_arg):
-        if name_table == "*":
-            raise ValueError(f"{name_table} не может иметь название *")
+        self.limit = lambda lim, offset=0: f" LIMIT {lim} OFFSET {offset}" if lim else ""
 
-        ObjSelect.reqSql = ""
-        ObjSelect.reqSql += ObjSelect.select(select_arg, name_table)
-        self.reqSql = ObjSelect.reqSql
+        self.order_by = lambda order: " ORDER BY {0} DESC".format(order[1::]) if order[
+                                                                                     0] == '-' else f' ORDER BY {order} ASC'
 
-    class Join:
-        def __init__(self, name_table: str, ON: str, leftJoin: bool = False):
+        self.Request: str = ""
+        if req:
+            self.Request += req
 
-            if not leftJoin:
-                ObjSelect.reqSql += "INNER JOIN {0} ON {1}".format(name_table, ', '.join(ON)) \
-                    if type(ON) == tuple \
-                    else "INNER JOIN {0} ON {1}".format(name_table, ON)
+        if name_table:
+            if name_table == "*":
+                raise ValueError(f"{name_table} не может иметь название *")
+            self.Request = self.select(select_arg, name_table)
 
-            else:
-                ObjSelect.reqSql += "LEFT JOIN {0} ON {1}".format(name_table, ', '.join(ON))
+    def Join(self, name_table: str, ON: str, leftJoin: bool = False):
+        if not leftJoin:
+            self.Request += " INNER JOIN {0} ON {1}".format(name_table, ', '.join(ON)) \
+                if type(ON) == tuple \
+                else " INNER JOIN {0} ON {1}".format(name_table, ON)
+        else:
+            self.Request += " LEFT JOIN {0} ON {1}".format(name_table, ', '.join(ON))
+        return Select("", "", req=self.Request)
 
-            self.reqSql = ObjSelect.reqSql
+    def GroupBy(self, *name_column):
+        self.Request += self.group_by(name_column)
+        return Select("", "", req=self.Request)
 
-        class OrderBy:  # +
-            def __init__(self, sqlORDER_BY):
-                ObjSelect.reqSql += ObjSelect.order_by(sqlORDER_BY)
-                self.reqSql = ObjSelect.reqSql
+    def OrderBy(self, name_column: str):
+        self.Request += self.order_by(name_column)
+        return Select("", "", req=self.Request)
 
-            class Limit:
-                def __init__(self, end: int, offset: int = 0):
-                    ObjSelect.reqSql += ObjSelect.limit(end, offset)
-                    self.reqSql = ObjSelect.reqSql
+    def Where(self, sqlWhere: str):
+        self.Request += self.where(sqlWhere)
+        return Select("", "", req=self.Request)
 
-        class Limit:  # +
-            def __init__(self, end: int, offset: int = 0):
-                ObjSelect.reqSql += ObjSelect.limit(end, offset)
-                self.reqSql = ObjSelect.reqSql
-
-        class GroupBy(Limit, OrderBy):
-            def __init__(self, *name_column):
-                super().__init__(None)
-                ObjSelect.reqSql += ObjSelect.group_by(name_column)
-                self.reqSql = ObjSelect.reqSql
-
-            class OrderBy:
-                def __init__(self, sqlORDER_BY):
-                    ObjSelect.reqSql += ObjSelect.order_by(sqlORDER_BY)
-                    self.reqSql = ObjSelect.reqSql
-
-                class Limit:
-                    def __init__(self, end: int, offset: int = 0):
-                        ObjSelect.reqSql += ObjSelect.limit(end, offset)
-                        self.reqSql = ObjSelect.reqSql
-
-        class Where(GroupBy, Limit, OrderBy):
-            def __init__(self, sqlWhere: str):
-                super().__init__(None)
-                ObjSelect.reqSql += ObjSelect.where(sqlWhere)
-                self.reqSql = ObjSelect.reqSql
-
-            class OrderBy:  # +
-                def __init__(self, sqlORDER_BY):
-                    ObjSelect.reqSql += ObjSelect.order_by(sqlORDER_BY)
-                    self.reqSql = ObjSelect.reqSql
-
-                class Limit:
-                    def __init__(self, end: int, offset: int = 0):
-                        ObjSelect.reqSql += ObjSelect.limit(end, offset)
-                        self.reqSql = ObjSelect.reqSql
-
-            class Limit:  # +
-                def __init__(self, end: int, offset: int = 0):
-                    ObjSelect.reqSql += ObjSelect.limit(end, offset)
-                    self.reqSql = ObjSelect.reqSql
-
-            class GroupBy(Limit, OrderBy):
-                def __init__(self, *name_column):
-                    super().__init__(None)
-                    ObjSelect.reqSql += ObjSelect.group_by(name_column)
-                    self.reqSql = ObjSelect.reqSql
-
-                class OrderBy:
-                    def __init__(self, sqlORDER_BY):
-                        ObjSelect.reqSql += ObjSelect.order_by(sqlORDER_BY)
-                        self.reqSql = ObjSelect.reqSql
-
-                    class Limit:
-                        def __init__(self, end: int, offset: int = 0):
-                            ObjSelect.reqSql += ObjSelect.limit(end, offset)
-                            self.reqSql = ObjSelect.reqSql
-
-    class OrderBy:  # +
-        def __init__(self, sqlORDER_BY):
-            ObjSelect.reqSql += ObjSelect.order_by(sqlORDER_BY)
-            self.reqSql = ObjSelect.reqSql
-
-        class Limit:
-            def __init__(self, end: int, offset: int = 0):
-                ObjSelect.reqSql += ObjSelect.limit(end, offset)
-                self.reqSql = ObjSelect.reqSql
-
-    class Limit:  # +
-        def __init__(self, end: int, offset: int = 0):
-            ObjSelect.reqSql += ObjSelect.limit(end, offset)
-            self.reqSql = ObjSelect.reqSql
-
-    class GroupBy(Limit, OrderBy):  # +
-        def __init__(self, *name_column):
-            super().__init__(None)
-            ObjSelect.reqSql += ObjSelect.group_by(name_column)
-            self.reqSql = ObjSelect.reqSql
-
-        class OrderBy:
-            def __init__(self, sqlORDER_BY):
-                ObjSelect.reqSql += ObjSelect.order_by(sqlORDER_BY)
-                self.reqSql = ObjSelect.reqSql
-
-            class Limit:
-                def __init__(self, end: int, offset: int = 0):
-                    ObjSelect.reqSql += ObjSelect.limit(end, offset)
-                    self.reqSql = ObjSelect.reqSql
-
-    class Where(GroupBy, Limit, OrderBy):
-        def __init__(self, sqlWhere: str):
-            super().__init__(None)
-            ObjSelect.reqSql += ObjSelect.where(sqlWhere)
-            self.reqSql = ObjSelect.reqSql
-
-        class OrderBy:  # +
-            def __init__(self, sqlORDER_BY):
-                ObjSelect.reqSql += ObjSelect.order_by(sqlORDER_BY)
-                self.reqSql = ObjSelect.reqSql
-
-            class Limit:
-                def __init__(self, end: int, offset: int = 0):
-                    ObjSelect.reqSql += ObjSelect.limit(end, offset)
-                    self.reqSql = ObjSelect.reqSql
-
-        class Limit:  # +
-            def __init__(self, end: int, offset: int = 0):
-                ObjSelect.reqSql += ObjSelect.limit(end, offset)
-                self.reqSql = ObjSelect.reqSql
-
-        class GroupBy(Limit, OrderBy):
-            def __init__(self, *name_column):
-                super().__init__(None)
-                ObjSelect.reqSql += ObjSelect.group_by(name_column)
-                self.reqSql = ObjSelect.reqSql
-
-            class OrderBy:
-                def __init__(self, sqlORDER_BY: str):
-                    ObjSelect.reqSql += ObjSelect.order_by(sqlORDER_BY)
-                    self.reqSql = ObjSelect.reqSql
-
-                class Limit:
-                    def __init__(self, end: int, offset: int = 0):
-                        ObjSelect.reqSql += ObjSelect.limit(end, offset)
-                        self.reqSql = ObjSelect.reqSql
+    def Limit(self, end: int, offset: int = 0):
+        self.Request += self.limit(end, offset)
+        return Select("", "", req=self.Request)

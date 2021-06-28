@@ -265,7 +265,7 @@ class SqlLiteQrm:
         return res
 
     def GetTable(self, NameTable: str,
-                 sqlLIMIT: limit = "",
+                 LIMIT: Tuple[int, int] = None,
                  FlagPrint: int = 0
                  ) -> list:  # +
         """
@@ -276,8 +276,8 @@ class SqlLiteQrm:
 
         request: str = 'SELECT * FROM {0}'.format(NameTable)
 
-        if sqlLIMIT:
-            request += sqlLIMIT
+        if LIMIT:
+            request += " LIMIT {0} OFFSET {1}".format(LIMIT[0], LIMIT[1])
 
         # Получить данные из таблицы
         with sqlite3.connect(self.name_db) as connect:
@@ -295,12 +295,12 @@ class SqlLiteQrm:
             cursor.execute('SELECT {0} FROM {1}'.format(name_columns, NameTable))
             return [x[0] for x in cursor.fetchall()]
 
-    def ObjSearch(self,
-                  ClassSelect: ObjSelect,
-                  FlagPrint: int = 0,
-                  ) -> Union[str, list]:
+    def Search(self,
+               objectSelect: Select,
+               FlagPrint: int = 0,
+               ) -> Union[str, list]:
 
-        request: str = ClassSelect.reqSql
+        request = objectSelect.Request
         with sqlite3.connect(self.name_db) as connect:
             cursor = connect.cursor()
             cursor.execute(request)
@@ -314,64 +314,64 @@ class SqlLiteQrm:
             print(self.__print_table(NameTable, sqlSelect, res, FlagPrint))
         return res
 
-    def SearchColumn(self, NameTable: str,
-                     sqlSelect: select,
-                     sqlJOIN: InnerJoin = "",  # [List[str],List[Union[str,List]]] = "",
-                     sqlWHERE: str = "",
-                     sqlGROUPBY: group_by = "",
-                     sqlORDER_BY: order_by = "",
-                     sqlLIMIT: limit = "",
-                     ReturnSqlRequest: bool = False,
-                     FlagPrint: int = 0
-                     ) -> Union[str, list]:  # +
-        """
-        :param NameTable: Название таблицы
-        :param sqlSelect: select :Union[str, Tuple]
-        :param sqlJOIN: InnerJoin||LeftJoin :Union[str, Tuple]
-        :param sqlWHERE: условие
-        :param sqlGROUPBY:  group_by :Union[str, Tuple]
-        :param sqlORDER_BY: order_by :str
-        :param sqlLIMIT:limit :int
-        :param ReturnSqlRequest: Вернет сформированный SQL запрос
-        :param FlagPrint: Отобразить в консоли
-        :return:
-        """
-        """
-        cursor.fetchone() - получить только первую запись
-        cursor.fetchmany() - получить только до указаонного колличества
-        cursor.fetchall() - получить все записи
-        for x in cursor - переберать по одному элементу(данные в виде итератора)      
-        """
-
-        request: str = 'SELECT {0} FROM {1}'.format(sqlSelect, NameTable)
-
-        if sqlJOIN:
-            request += " {0}".format(sqlJOIN)
-
-        if sqlWHERE:
-            request += " WHERE {0}".format(sqlWHERE)
-
-        if sqlGROUPBY:
-            request += sqlGROUPBY
-
-        if sqlORDER_BY:
-            request += sqlORDER_BY
-
-        if sqlLIMIT:
-            request += sqlLIMIT
-
-        if ReturnSqlRequest:
-            return request
-
-        else:
-            with sqlite3.connect(self.name_db) as connect:
-                res = connect.cursor().execute(request).fetchall()
-
-            if FlagPrint:
-                if sqlSelect == "*":
-                    sqlSelect = ", ".join(self.header_table[NameTable].keys())
-                print(self.__print_table(NameTable, sqlSelect, res, FlagPrint))
-            return res
+    # def SearchColumn(self, NameTable: str,
+    #                  sqlSelect: select,
+    #                  sqlJOIN: InnerJoin = "",  # [List[str],List[Union[str,List]]] = "",
+    #                  sqlWHERE: str = "",
+    #                  sqlGROUPBY: group_by = "",
+    #                  sqlORDER_BY: order_by = "",
+    #                  sqlLIMIT: limit = "",
+    #                  ReturnSqlRequest: bool = False,
+    #                  FlagPrint: int = 0
+    #                  ) -> Union[str, list]:  # +
+    #     """
+    #     :param NameTable: Название таблицы
+    #     :param sqlSelect: select :Union[str, Tuple]
+    #     :param sqlJOIN: InnerJoin||LeftJoin :Union[str, Tuple]
+    #     :param sqlWHERE: условие
+    #     :param sqlGROUPBY:  group_by :Union[str, Tuple]
+    #     :param sqlORDER_BY: order_by :str
+    #     :param sqlLIMIT:limit :int
+    #     :param ReturnSqlRequest: Вернет сформированный SQL запрос
+    #     :param FlagPrint: Отобразить в консоли
+    #     :return:
+    #     """
+    #     """
+    #     cursor.fetchone() - получить только первую запись
+    #     cursor.fetchmany() - получить только до указаонного колличества
+    #     cursor.fetchall() - получить все записи
+    #     for x in cursor - переберать по одному элементу(данные в виде итератора)
+    #     """
+    #
+    #     request: str = 'SELECT {0} FROM {1}'.format(sqlSelect, NameTable)
+    #
+    #     if sqlJOIN:
+    #         request += " {0}".format(sqlJOIN)
+    #
+    #     if sqlWHERE:
+    #         request += " WHERE {0}".format(sqlWHERE)
+    #
+    #     if sqlGROUPBY:
+    #         request += sqlGROUPBY
+    #
+    #     if sqlORDER_BY:
+    #         request += sqlORDER_BY
+    #
+    #     if sqlLIMIT:
+    #         request += sqlLIMIT
+    #
+    #     if ReturnSqlRequest:
+    #         return request
+    #
+    #     else:
+    #         with sqlite3.connect(self.name_db) as connect:
+    #             res = connect.cursor().execute(request).fetchall()
+    #
+    #         if FlagPrint:
+    #             if sqlSelect == "*":
+    #                 sqlSelect = ", ".join(self.header_table[NameTable].keys())
+    #             print(self.__print_table(NameTable, sqlSelect, res, FlagPrint))
+    #         return res
 
     def UpdateColumne(self, NameTable: str,
                       name_column: Union[str, List[str]],
