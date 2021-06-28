@@ -10,15 +10,10 @@ from sqlliteorm.sql_modules import *
 
 
 class SqlLiteQrm:
-    """
-    - Запись данных в БД
-    - Чтение данных Из БД
-    """
 
     def __init__(self, name_dbf: str) -> None:  # +
-        self.connection = None
-        # Проверка того что разшерение db
-        tmp = name_dbf.split(".")
+
+        tmp = name_dbf.split(".")  # Проверка того что разшерение db
         if len(tmp) != 2 or tmp[1] != "db":
             raise NameError("Файл должен иметь разшерение .db")
 
@@ -26,108 +21,11 @@ class SqlLiteQrm:
         self.header_table: Dict[
             str, Dict[str, tuple]] = self.__update_header_table()  # Тут храниться типы столбцов таблциы
 
-        # self.connection = sqlite3.connect(self.name_db)
-        # self.cursor = self.connection.cursor()
-
-    def __del__(self):  # +
-        pass
-
     def ListTables(self) -> List[str]:  # +
         with sqlite3.connect(self.name_db) as connect:
             cursor = connect.cursor()
             cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
             return [x[0] for x in cursor.fetchall() if x[0] != 'sqlite_sequence']
-
-    @staticmethod
-    def toDictSql(sql_request: str) -> Dict[str, tuple]:
-        # Зависит от SqlName
-        """
-        # Доделать оброботку дополнительных пармаетров
-
-        :param sql_request: Sql запрос
-        :return: словарь который поддерживает класс SqlLite
-        """
-        res_dict = {}
-        # Конвертировать SQL запросв в header_db
-        for d in sql_request[1:-1:].split(","):
-
-            if d.find("TEXT") != -1:
-                v = str
-            elif d.find("INTEGER") != -1:
-                v = int
-            elif d.find("REAL") != -1:
-                v = float
-            elif d.find("BLOB") != -1:
-                v = bytes
-            elif d.find("NULL") != -1:
-                v = None
-            else:
-                raise TypeError(
-                    "Указан не верный тип данных выбирете TEXT;INTEGER;REAL;BLOB;NULL\n{0}".format(d))
-
-            two = ""
-            # Сначало длинные слова потом короткие
-            if d.find("PRIMARY KEY AUTOINCREMENT") != -1:
-                two = "PRIMARY KEY AUTOINCREMENT"
-            elif d.find("PRIMARY KEY") != -1:
-                two = "PRIMARY KEY"
-            #
-            elif d.find("NOT NULL DEFAULT") != -1:
-                two = "NOT NULL DEFAULT {0}".format(d.split(" ")[:-1:])
-            elif d.find("DEFAULT") != -1:
-                two = "DEFAULT"
-            elif d.find("NOT NULL") != -1:
-                two = "NOT NULL"
-
-            res_dict[d.lstrip().split(" ")[0]] = (v, two)
-
-        return res_dict
-
-    @staticmethod
-    def toSqlRequest(data: Dict[str, Union[tuple, str]]) -> str:
-        """
-        :param data: словарь по стандартам класса SqlLite
-        :return: SQl запрос
-        """
-        count_primary_key = False
-        # Конвертация словаря в SQL запрос
-        res = "("
-        for k, v in data.items():
-            res += str(k)
-
-            if type(v) == tuple and len(v) == 2:  # Комбенированная запись с параметрами столбца
-
-                if v[1] == PrimaryKey or v[1] == PrimaryKeyAutoincrement:  # Проверка уникальности Primary Key в таблицы
-                    if not count_primary_key:
-                        count_primary_key = True
-                    else:
-                        raise LookupError("Запрос имеет больше одного primary key")
-
-                tmp = " {0}".format(v[1])
-                values = v[0]
-            else:  # Обыная запись столбца
-                tmp = ''
-                values = v
-
-            if values == str:
-                res += " TEXT"
-            elif values == int:
-                res += " INTEGER"
-            elif values == float:
-                res += " REAL"
-            elif values == bytes:
-                res += " BLOB"
-            elif values is None:
-                res += " NULL"
-            else:
-                raise TypeError(
-                    "Указан не верный тип данных выбирете str;int;float;None;bytes\n{0}:{1}".format(k, v))
-
-            res += "{0}{1}".format(tmp, ", ")
-
-        res = res[:-2:]
-        res += ")"
-        return res
 
     @staticmethod
     def __CheckBlob(data: List[Union[List[Union[str, bytes, Binary, int, float]], Tuple]]) -> \

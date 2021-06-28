@@ -156,7 +156,7 @@ class TestSqlLite(unittest.TestCase):
         self.sq.DeleteTable(self.name_table)
 
         # Проверка попытки записи типа BLOB через строку -> должны быть ошибка TypeError
-        test_header = {"str": toTypeSql(str), "int": int, "float": float, "bytes": bytes}
+        test_header = {"str": toTypeSql(str), "int": toTypeSql(int), "float": toTypeSql(float), "bytes": toTypeSql(bytes)}
         test_data = "('text', '123', '122.32', '{0}')".format(b"0101")
         self.sq.CreateTable(self.name_table, "(str TEXT, int INTEGER, float REAL, bytes BLOB)")
 
