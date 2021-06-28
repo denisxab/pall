@@ -7,6 +7,203 @@ from typing import List, Tuple, Dict, Union
 from file import TxtFile
 
 
+
+
+
+
+
+
+
+requestSql = ""
+
+limit = lambda lim, offset=0: " LIMIT {0} OFFSET {1}".format(lim, offset)
+where = lambda condition: " WHERE {0}".format(condition)
+order_by = lambda order: \
+    " ORDER BY {0} DESC".format(order[1::]) \
+        if order[0] == '-' \
+        else ' ORDER BY {0} ASC'.format(order)
+
+group_by = lambda group: \
+    " GROUP BY {0}".format(', '.join(group))
+
+name_db: str = ""
+
+
+class SqlOrmLite:
+
+    def __init__(self, name_db_class: str):
+        global name_db
+        name_db = name_db_class
+
+    class Select:
+        def __init__(self, name_table, *select):
+            global requestSql
+            requestSql = ""
+            requestSql += 'SELECT {0} FROM {1}'.format(', '.join(select), name_table)
+
+        class Join:
+            def __init__(self, name_table: str, ON: str, LeftJoin: bool = False):
+                global requestSql
+                if not LeftJoin:
+                    requestSql += "INNER JOIN {0} ON {1}".format(name_table, ', '.join(ON)) \
+                        if type(ON) == tuple \
+                        else "INNER JOIN {0} ON {1}".format(name_table, ON)
+
+                else:
+                    requestSql += "LEFT JOIN {0} ON {1}".format(name_table, ', '.join(ON))
+
+            class OrderBy:  # +
+                def __init__(self, sqlORDER_BY):
+                    global requestSql, order_by
+                    requestSql += order_by(sqlORDER_BY)
+
+                class Limit:
+                    def __init__(self, end: int, offset: int = 0):
+                        global requestSql, limit
+                        requestSql += limit(end, offset)
+
+            class Limit:  # +
+                def __init__(self, end: int, offset: int = 0):
+                    global requestSql, limit
+                    requestSql += limit(end, offset)
+
+            class GroupBy(Limit, OrderBy):
+                def __init__(self, *name_column):
+                    super().__init__(0)
+                    global requestSql, group_by
+                    requestSql += group_by(name_column)
+
+                class OrderBy:
+                    def __init__(self, sqlORDER_BY):
+                        global requestSql, order_by
+                        requestSql += order_by(sqlORDER_BY)
+
+                    class Limit:
+                        def __init__(self, end: int, offset: int = 0):
+                            global requestSql, limit
+                            requestSql += limit(end, offset)
+
+            class Where(GroupBy, Limit, OrderBy):
+                def __init__(self, sqlWhere: str):
+                    super().__init__('')
+                    global requestSql, where
+                    requestSql += where(sqlWhere)
+
+                class OrderBy:  # +
+                    def __init__(self, sqlORDER_BY):
+                        global requestSql, order_by
+                        requestSql += order_by(sqlORDER_BY)
+
+                    class Limit:
+                        def __init__(self, end: int, offset: int = 0):
+                            global requestSql, limit
+                            requestSql += limit(end, offset)
+
+                class Limit:  # +
+                    def __init__(self, end: int, offset: int = 0):
+                        global requestSql, limit
+                        requestSql += limit(end, offset)
+
+                class GroupBy(Limit, OrderBy):
+                    def __init__(self, *name_column):
+                        super().__init__(0)
+
+
+                        global requestSql, group_by
+                        requestSql += group_by(name_column)
+
+                    class OrderBy:
+                        def __init__(self, sqlORDER_BY):
+                            global requestSql, order_by
+                            requestSql += order_by(sqlORDER_BY)
+
+                        class Limit:
+                            def __init__(self, end: int, offset: int = 0):
+                                global requestSql, limit
+                                requestSql += limit(end, offset)
+
+        class OrderBy:  # +
+            def __init__(self, sqlORDER_BY):
+                global requestSql, order_by
+                requestSql += order_by(sqlORDER_BY)
+
+            class Limit:
+                def __init__(self, end: int, offset: int = 0):
+                    global requestSql, limit
+                    requestSql += limit(end, offset)
+
+        class Limit:  # +
+            def __init__(self, end: int, offset: int = 0):
+                global requestSql, limit
+                requestSql += limit(end, offset)
+
+        class GroupBy(Limit, OrderBy):  # +
+            def __init__(self, *name_column):
+                super().__init__(0)
+                global requestSql, group_by
+                requestSql += group_by(name_column)
+
+            class OrderBy:
+                def __init__(self, sqlORDER_BY):
+                    global requestSql, order_by
+                    requestSql += order_by(sqlORDER_BY)
+
+                class Limit:
+                    def __init__(self, end: int, offset: int = 0):
+                        global requestSql, limit
+                        requestSql += limit(end, offset)
+
+        class Where(GroupBy, Limit, OrderBy):
+            def __init__(self, sqlWhere: str):
+                super().__init__('')
+                global requestSql, where
+                requestSql += where(sqlWhere)
+
+            class OrderBy:  # +
+                def __init__(self, sqlORDER_BY):
+                    global requestSql, order_by
+                    requestSql += order_by(sqlORDER_BY)
+
+                class Limit:
+                    def __init__(self, end: int, offset: int = 0):
+                        global requestSql, limit
+                        requestSql += limit(end, offset)
+
+            class Limit:  # +
+                def __init__(self, end: int, offset: int = 0):
+                    global requestSql, limit
+                    requestSql += limit(end, offset)
+
+            class GroupBy(Limit, OrderBy):
+                def __init__(self, *name_column):
+                    super().__init__(0)
+                    global requestSql, group_by
+                    requestSql += group_by(name_column)
+
+                class OrderBy:
+                    def __init__(self, sqlORDER_BY: str):
+                        global requestSql, order_by
+                        requestSql += order_by(sqlORDER_BY)
+
+                    class Limit:
+                        def __init__(self, end: int, offset: int = 0):
+                            global requestSql, limit
+                            requestSql += limit(end, offset)
+
+
+# 5
+if __name__ == '__main__':
+    sss = SqlOrmLite("my_db").Select("my_table", "id", "name").Where("a > 10").Limit(10, 5)
+    print(requestSql)
+    re = SqlOrmLite.Select("my_table", "id", "name").Where("a > 10").GroupBy("id","123").OrderBy("name").Limit(10, 5)
+    print(requestSql)
+
+
+
+
+
+
+
 class sqn:
     PK: str = "PRIMARY KEY"  # Должны содержать ункальные значения
     NN: str = "NOT NULL"  # Всегда должно быть заполенно
