@@ -1,21 +1,24 @@
 import unittest
 from os.path import getsize
-from typing import List, Tuple, Dict, Set
+from typing import List, Dict
 
 from file import TxtFile, CsvFile, JsonFile, PickleFile
 
 
 class TestFile(unittest.TestCase):
 
+    def __init__(self, methodName: str = ...) -> None:
+        super().__init__(methodName)
+        # Имя фалйа
+        self.nameFile = "test.txt"
+        # Данные для теста
+        self.test_str: str = "ninja cjj,output На двух языках 1#1^23 !23№эЭ123'"
+
     # Этот метод запускаетсья ПЕРЕД каждой функции теста
     def setUp(self) -> None:
-        self.nameFile = "test.txt"
         self.testClassFile = TxtFile(self.nameFile)
         self.testClassFile.deleteFile()
         self.testClassFile.createFileIfDoesntExist()
-
-        # Данные для теста
-        self.test_str: str = "ninja cjj,output На двух языках 1#1^23 !23№эЭ123'"
 
     def test_sizeFile(self):
         # Првоекра определение размера файла
@@ -54,9 +57,16 @@ class TestFile(unittest.TestCase):
         tests += tests
         self.assertEqual(tests.encode(), self.testClassFile.readBinaryFile())
 
+    def test_readFile_Line(self):
+        test_text = "123123\n3123133\n12312d1d12313"
+        self.testClassFile.writeFile(test_text)
+        self.assertEqual(self.testClassFile.readFile(2), "123123\n3123133\n")
+
     # Этот метод запускаетсья ПОСЛЕ каждой функции теста
-    def tearDown(self):
-        pass
+    def test_searchFile(self):
+        test_text = "Optional. If the number of \n bytes returned exceed the hint number, \n no more lines will be returned. Default value is  -1, which means all lines will be returned."
+        self.testClassFile.writeFile(test_text)
+        self.assertEqual(self.testClassFile.searchFile("more"), True)
 
     def __del__(self):
         self.testClassFile.deleteFile()
@@ -64,25 +74,24 @@ class TestFile(unittest.TestCase):
 
 class TestJson(unittest.TestCase):
 
+    def __init__(self, methodName: str = ...) -> None:
+        super().__init__(methodName)
+        # Данные для теста
+        self.testlist: List[List, Dict] = [
+            [1, 2.1, -1, -2.1, "1", "\t", "Qwe", "Фыв"],
+            {12: 2, 1: 1, 1.2: 1.3, 13: 1.2, 4.2: 1, -12: 1, 41: -23, -23.1: -2.2, -232.2: 1,
+             "Qwe": 1, 15: "Qwe", -21: "Qwe", 12.3: "DewW", -11: "wasd", "quests": -123},
+        ]
+
     # Этот метод запускаетсья ПЕРЕД каждой функции теста
     def setUp(self) -> None:
         self.testClassJson = JsonFile("test.json")
         self.testClassJson.deleteFile()
         self.testClassJson.createFileIfDoesntExist()
 
-        # Данные для теста
-        self.testlist: Tuple[List, Tuple, Dict, Set] = (
-            [1, 2.1, -1, -2.1, "1", "\t", "Qwe", "Фыв"],
-            (1, 2.1, -1, -2.1, "1", "\t", "Qwe", "Фыв"),
-            # все ключи словаря переводяться в тип строки
-            {12: 2, 1: 1, 1.2: 1.3, 13: 1.2, 4.2: 1, -12: 1, 41: -23, -23.1: -2.2, -232.2: 1,
-             "Qwe": 1, 15: "Qwe", -21: "Qwe", 12.3: "DewW", -11: "wasd", "quests": -123},
-            {1, 2.1, -1, -2.1, "1", "\t", "Qwe", "Фыв"}
-        )
-
     def test_sizeFile(self):
         # Првоекра определение размера файла
-        self.testClassJson.writeFile(self.testlist[:-1:])  # все кроме set
+        self.testClassJson.writeFile(self.testlist)
         self.assertEqual(self.testClassJson.sizeFile(), getsize(self.testClassJson.nameFile))
 
     def test_deleteFile_and_checkExistenceFile(self):
@@ -100,24 +109,12 @@ class TestJson(unittest.TestCase):
         self.testClassJson.writeFile(temples)
         self.assertEqual(temples, self.testClassJson.readFile())
 
-        # Tuple
-        self.testClassJson.deleteFile()
-        self.testClassJson.createFileIfDoesntExist()
-        temples: Tuple = self.testlist[1]
-        self.testClassJson.writeFile(temples)
-        self.assertEqual(temples, self.testClassJson.readFile())
-
         # Dict
         self.testClassJson.deleteFile()
         self.testClassJson.createFileIfDoesntExist()
-        temples: Dict = {str(k): v for k, v in self.testlist[2].items()}  # все ключи должны быть типа str
+        temples: Dict = {str(k): v for k, v in self.testlist[1].items()}  # все ключи должны быть типа str
         self.testClassJson.writeFile(temples)
         self.assertEqual(temples, self.testClassJson.readFile())
-
-        # Set
-        temples: Set = self.testlist[3]
-        self.testClassJson.writeFile(temples, lang="ru")
-        self.assertEqual({str(k) for k in temples}, self.testClassJson.readFile())
 
     def test_appendJsonListFile(self):
         # Првоекра дозаписи в файл разных структур данных
@@ -127,38 +124,18 @@ class TestJson(unittest.TestCase):
         self.testClassJson.createFileIfDoesntExist()
         tempers: List = self.testlist[0]
         self.testClassJson.writeFile(tempers)
-        self.testClassJson.appendJsonListFile(tempers)
-        tempers += tempers
-        self.assertEqual(tempers, self.testClassJson.readFile())
-
-        # Tuple
-        self.testClassJson.deleteFile()
-        self.testClassJson.createFileIfDoesntExist()
-        tempers: Tuple = self.testlist[1]
-        self.testClassJson.writeFile(tempers)
-        self.testClassJson.appendJsonListFile(tempers)
+        self.testClassJson.appendFile(tempers)
         tempers += tempers
         self.assertEqual(tempers, self.testClassJson.readFile())
 
         # Dict
         self.testClassJson.deleteFile()
         self.testClassJson.createFileIfDoesntExist()
-        tempers: Dict = {str(k): v for k, v in self.testlist[2].items()}  # все ключи должны быть типа str
+        tempers: Dict = {str(k): v for k, v in self.testlist[1].items()}  # все ключи должны быть типа str
         self.testClassJson.writeFile(tempers)
-        self.testClassJson.appendJsonListFile(tempers)
+        self.testClassJson.appendFile(tempers)
         tempers.update(tempers)
         self.assertEqual(tempers, self.testClassJson.readFile())
-
-        # Set
-        tempers: Set = self.testlist[3]
-        self.testClassJson.writeFile(tempers, lang="ru")
-        self.testClassJson.appendJsonListFile(tempers)
-        tempers.update(tempers)
-        self.assertEqual({str(k) for k in tempers}, self.testClassJson.readFile())
-
-    # Этот метод запускаетсья ПОСЛЕ каждой функции теста
-    def tearDown(self):
-        pass
 
     def __del__(self):
         self.testClassJson.deleteFile()
@@ -304,9 +281,11 @@ class TestCsvFile(unittest.TestCase):
 
 
 class TestPickleFile(unittest.TestCase):
+    def __init__(self, methodName: str = ...) -> None:
+        super().__init__(methodName)
+        self.name_file = "test_pickle.pkl"
 
     def setUp(self):
-        self.name_file = "test_pickle.pkl"
         self.pk = PickleFile(self.name_file)
         self.pk.deleteFile()
 
@@ -324,6 +303,16 @@ class TestPickleFile(unittest.TestCase):
             self.pk.writeFile(td)
             self.assertEqual(self.pk.readFile(), td)
             self.pk.deleteFile()
+
+        self.pk.deleteFile()
+
+    def test_appendFile(self):
+        test_data = [1, 2, 3, 4]
+        new_data = [98, 678, 88]
+        self.pk.writeFile(test_data)
+        self.pk.appendFile(new_data)
+        test_data += new_data
+        self.assertEqual(self.pk.readFile(), test_data)
 
 
 if __name__ == '__main__':

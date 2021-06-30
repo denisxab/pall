@@ -7,9 +7,12 @@ from sqlliteorm.sqlliteorm import *
 
 class TestSqlLite(unittest.TestCase):
 
-    def setUp(self) -> None:
+    def __init__(self, methodName: str = ...) -> None:
+        super().__init__(methodName)
         self.name_db = "test.db"
         self.name_table = "stocks"
+
+    def setUp(self) -> None:
         self.sq = SqlLiteQrm(self.name_db)
         self.sq.DeleteTable(self.name_table)
 
@@ -609,8 +612,6 @@ class TestSqlLite(unittest.TestCase):
                                                        {"name": "Mush", "old": 321, "sex": 21},
                                                        {"name": "Patio", "old": 231, "sex": 21},
                                                        {"name": "Denis", "old": 24}])
-
-
 
         self.assertEqual(self.sq.Search(Select(self.name_table, CountSql("sex")).Where("old < 25")), [(2,)])
 

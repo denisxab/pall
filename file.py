@@ -3,7 +3,7 @@ import json
 import pickle
 from os import remove, SEEK_END, SEEK_SET
 from os.path import getsize, abspath, exists
-from typing import List, Tuple, Dict, Set, Union, Any
+from typing import List, Dict, Union, Any
 
 
 class File:
@@ -16,6 +16,7 @@ class File:
     - размер файла
     - проверка разрешения открытия файла
     """
+    __slots__ = ("nameFile")
 
     def __init__(self, nameFile: str):
         self.nameFile: str = nameFile
@@ -43,10 +44,13 @@ class File:
         # Путь к файлу
         return abspath(self.nameFile)
 
-    def readFile(self):
+    def readFile(self, *arg) -> Any:
         raise NotImplementedError()
 
-    def writeFile(self, *arg, **kwargs):
+    def writeFile(self, arg: Any):
+        raise NotImplementedError()
+
+    def appendFile(self, arg: Any):
         raise NotImplementedError()
 
 
@@ -59,13 +63,28 @@ class PickleFile(File):
 
         File.__init__(self, nameFile)
 
-    def writeFile(self, data: Any, protocol: int = 3):
+    def writeFile(self, data: Any, *, protocol: int = 3):
         with open(self.nameFile, "wb") as pickFile:
             pickle.dump(data, pickFile, protocol=protocol)
 
     def readFile(self) -> Any:
         with open(self.nameFile, "rb") as pickFile:
             return pickle.load(pickFile)
+
+    def appendFile(self, data: Any, *, protocol: int = 3):
+
+        tmp_data = self.readFile()
+        if type(data) == type(tmp_data):
+            # Tuple List
+            if type(data) == tuple or type(data) == list:
+                self.writeFile(tmp_data + data)
+
+            # Dict Set
+            elif type(data) == dict:
+                tmp_data.update(data)
+                self.writeFile(tmp_data)
+        else:
+            raise TypeError("Тип даннных в файле и тип входных данных раличны")
 
 
 class CsvFile(File):
@@ -76,7 +95,7 @@ class CsvFile(File):
 
         File.__init__(self, nameFile)
 
-    def readFile(self,
+    def readFile(self, *,
                  encoding: str = "utf-8",
                  newline: str = "",
                  limit: int = None,
@@ -105,7 +124,7 @@ class CsvFile(File):
                 return res[1::]
             return res
 
-    def readFileRevers(self,
+    def readFileRevers(self, *,
                        limit: int = None,
                        encoding: str = "utf-8",
                        newline: str = ""
@@ -148,7 +167,7 @@ class CsvFile(File):
         return res
 
     def writeFile(self, data: Union[List[Union[str, int, float]],
-                                    List[List[Union[str, int, float]]]],
+                                    List[List[Union[str, int, float]]]], *,
                   header: tuple = None,
                   FlagDataConferToStr: bool = False,
                   encoding: str = "utf-8",
@@ -178,7 +197,7 @@ class CsvFile(File):
                 writer.writerows(data)
 
     def appendFile(self, data: Union[List[Union[str, int, float]],
-                                     List[List[Union[str, int, float]]]],
+                                     List[List[Union[str, int, float]]]], *,
                    FlagDataConferToStr: bool = False,
                    encoding: str = "utf-8",
                    newline: str = ""
@@ -212,15 +231,25 @@ class TxtFile(File):
 
         File.__init__(self, nameFile)
 
-    def readFile(self) -> str:  # +
+    def readFile(self, limit: int = 0) -> str:  # +
         with open(self.nameFile, "r") as f:
-            return f.read()
+            if limit:
+                res: str = ""
+                for line in f:
+                    if limit:
+                        res += line
+                        limit -= 1
+                    else:
+                        break
+                return res
+            else:
+                return f.read()
 
-    def searchFile(self, data: str) -> bool:  # Нет Тестов
+    def searchFile(self, data: str) -> bool:
         res = False
         with open(self.nameFile, "r") as f:
             for line in f:
-                if line.find(data):
+                if line.find(data) != -1:
                     res = True
                     break
         return res
@@ -258,57 +287,27 @@ class JsonFile(File):
         tmp = nameFile.split(".")
         if len(tmp) != 2 or tmp[1] != "json":
             raise ValueError("Файл должен иметь разшерение .json")
-
         File.__init__(self, nameFile)
 
-    def readFile(self) -> Union[List, Tuple, Dict, Set]:  # +
+    def readFile(self) -> Union[List, Dict]:  # +
         with open(self.nameFile, "r") as read_file:
-            tmp = json.load(read_file)
-            if tmp[0] == "any":
-                return tmp[1]
-            elif tmp[0] == "set":
-                return set(tmp[1].keys())
-            elif tmp[0] == "tuple":
-                return tuple(tmp[1])
+            return json.load(read_file)
 
-    def writeFile(self, data: Union[List, Tuple, Dict, Set], lang: str = "en"):  # +
-        fun_en = lambda data_lambda: json.dump(data_lambda, write_file)
-        fun_ru = lambda data_lambda: json.dump(data_lambda, write_file, ensure_ascii=False)
+    def writeFile(self, data: Union[List, Dict], *, ensure_ascii: bool = False):  # +
+        with open(self.nameFile, "w") as write_file:
+            json.dump(data, write_file, ensure_ascii=ensure_ascii)
 
-        if type(data) == tuple:
-            # Запись Tuple в виде List
-            with open(self.nameFile, "w") as write_file:
-                if lang == "en":
-                    fun_en(["tuple", data])
-                elif lang == "ru":
-                    fun_ru(["tuple", data])
-
-        elif type(data) == set:
-            # Запись Set в виде Dict
-            with open(self.nameFile, "w") as write_file:
-                if lang == "en":
-                    fun_en(["set", {d: '' for d in data}])
-                elif lang == "ru":
-                    fun_ru(["set", {d: '' for d in data}])
-        else:
-            # List,Dict
-            with open(self.nameFile, "w") as write_file:
-                if lang == "en":
-                    fun_en(["any", data])
-                elif lang == "ru":
-                    fun_ru(["any", data])
-
-    def appendJsonListFile(self, data: Union[List, Tuple, Dict, Set], lang: str = "en"):  # +
+    def appendFile(self, data: Union[List, Dict], *, ensure_ascii: bool = False):  # +
         tmp_data = self.readFile()
         if type(data) == type(tmp_data):
+            # Tuple List
             if type(data) == tuple or type(data) == list:
-                # Tuple List
-                self.writeFile(tmp_data + data, lang)
+                self.writeFile(tmp_data + data, ensure_ascii=ensure_ascii)
 
-            elif type(data) == set or type(data) == dict:
-                # Dict Set
+            # Dict Set
+            elif type(data) == dict:
                 tmp_data.update(data)
-                self.writeFile(tmp_data, lang)
+                self.writeFile(tmp_data, ensure_ascii=ensure_ascii)
         else:
             raise TypeError("Тип даннных в файле и тип входных данных раличны")
 
