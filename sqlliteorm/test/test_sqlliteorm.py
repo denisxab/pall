@@ -610,6 +610,8 @@ class TestSqlLite(unittest.TestCase):
                                                        {"name": "Patio", "old": 231, "sex": 21},
                                                        {"name": "Denis", "old": 24}])
 
+
+
         self.assertEqual(self.sq.Search(Select(self.name_table, CountSql("sex")).Where("old < 25")), [(2,)])
 
         self.assertEqual(self.sq.Search(Select(self.name_table, SumSql("old")).Where("old < 25")), [(45,)])

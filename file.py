@@ -1,9 +1,9 @@
 import csv
-import os
-from json import dump, load
-from os import remove
+import json
+import pickle
+from os import remove, SEEK_END, SEEK_SET
 from os.path import getsize, abspath, exists
-from typing import List, Tuple, Dict, Set, Union
+from typing import List, Tuple, Dict, Set, Union, Any
 
 
 class File:
@@ -42,6 +42,30 @@ class File:
     def route(self) -> str:  # +
         # Путь к файлу
         return abspath(self.nameFile)
+
+    def readFile(self):
+        raise NotImplementedError()
+
+    def writeFile(self, *arg, **kwargs):
+        raise NotImplementedError()
+
+
+class PickleFile(File):
+    # https://docs.python.org/3/library/pickle.html
+    def __init__(self, nameFile: str):
+        tmp = nameFile.split(".")
+        if any((len(tmp) != 2, tmp[1] != "pkl")):
+            raise ValueError("Файл должен иметь разшерение .pkl")
+
+        File.__init__(self, nameFile)
+
+    def writeFile(self, data: Any, protocol: int = 3):
+        with open(self.nameFile, "wb") as pickFile:
+            pickle.dump(data, pickFile, protocol=protocol)
+
+    def readFile(self) -> Any:
+        with open(self.nameFile, "rb") as pickFile:
+            return pickle.load(pickFile)
 
 
 class CsvFile(File):
@@ -87,7 +111,7 @@ class CsvFile(File):
                        newline: str = ""
                        ) -> List[List[str]]:
         def reversed_lines(file):
-            "Generate the lines of file in reverse order."
+            # Generate the lines of file in reverse order
             part = ''
             for block in reversed_blocks(file):
                 for c in reversed(block):
@@ -95,16 +119,17 @@ class CsvFile(File):
                         yield part[::-1]
                         part = ''
                     part += c
-            if part: yield part[::-1]
+            if part:
+                yield part[::-1]
 
-        def reversed_blocks(file, blocksize=4096):
-            "Generate blocks of file's contents in reverse order."
-            file.seek(0, os.SEEK_END)
+        def reversed_blocks(file, block_size=4096):
+            # Generate blocks of file's contents in reverse order.
+            file.seek(0, SEEK_END)
             here = file.tell()
             while 0 < here:
-                delta = min(blocksize, here)
+                delta = min(block_size, here)
                 here -= delta
-                file.seek(here, os.SEEK_SET)
+                file.seek(here, SEEK_SET)
                 yield file.read(delta)
 
         res = []
@@ -191,6 +216,15 @@ class TxtFile(File):
         with open(self.nameFile, "r") as f:
             return f.read()
 
+    def searchFile(self, data: str) -> bool:  # Нет Тестов
+        res = False
+        with open(self.nameFile, "r") as f:
+            for line in f:
+                if line.find(data):
+                    res = True
+                    break
+        return res
+
     def readBinaryFile(self) -> bytes:  # +
         with open(self.nameFile, "rb") as f:
             return f.read()
@@ -227,9 +261,9 @@ class JsonFile(File):
 
         File.__init__(self, nameFile)
 
-    def readJsonFile(self) -> Union[List, Tuple, Dict, Set]:  # +
+    def readFile(self) -> Union[List, Tuple, Dict, Set]:  # +
         with open(self.nameFile, "r") as read_file:
-            tmp = load(read_file)
+            tmp = json.load(read_file)
             if tmp[0] == "any":
                 return tmp[1]
             elif tmp[0] == "set":
@@ -237,9 +271,9 @@ class JsonFile(File):
             elif tmp[0] == "tuple":
                 return tuple(tmp[1])
 
-    def writeJsonFile(self, data: Union[List, Tuple, Dict, Set], lang: str = "en"):  # +
-        fun_en = lambda data_lambda: dump(data_lambda, write_file)
-        fun_ru = lambda data_lambda: dump(data_lambda, write_file, ensure_ascii=False)
+    def writeFile(self, data: Union[List, Tuple, Dict, Set], lang: str = "en"):  # +
+        fun_en = lambda data_lambda: json.dump(data_lambda, write_file)
+        fun_ru = lambda data_lambda: json.dump(data_lambda, write_file, ensure_ascii=False)
 
         if type(data) == tuple:
             # Запись Tuple в виде List
@@ -265,16 +299,16 @@ class JsonFile(File):
                     fun_ru(["any", data])
 
     def appendJsonListFile(self, data: Union[List, Tuple, Dict, Set], lang: str = "en"):  # +
-        tmp_data = self.readJsonFile()
+        tmp_data = self.readFile()
         if type(data) == type(tmp_data):
             if type(data) == tuple or type(data) == list:
                 # Tuple List
-                self.writeJsonFile(tmp_data + data, lang)
+                self.writeFile(tmp_data + data, lang)
 
             elif type(data) == set or type(data) == dict:
                 # Dict Set
                 tmp_data.update(data)
-                self.writeJsonFile(tmp_data, lang)
+                self.writeFile(tmp_data, lang)
         else:
             raise TypeError("Тип даннных в файле и тип входных данных раличны")
 

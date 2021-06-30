@@ -2,7 +2,7 @@ import unittest
 from os.path import getsize
 from typing import List, Tuple, Dict, Set
 
-from file import TxtFile, CsvFile, JsonFile
+from file import TxtFile, CsvFile, JsonFile, PickleFile
 
 
 class TestFile(unittest.TestCase):
@@ -82,7 +82,7 @@ class TestJson(unittest.TestCase):
 
     def test_sizeFile(self):
         # Првоекра определение размера файла
-        self.testClassJson.writeJsonFile(self.testlist[:-1:])  # все кроме set
+        self.testClassJson.writeFile(self.testlist[:-1:])  # все кроме set
         self.assertEqual(self.testClassJson.sizeFile(), getsize(self.testClassJson.nameFile))
 
     def test_deleteFile_and_checkExistenceFile(self):
@@ -97,27 +97,27 @@ class TestJson(unittest.TestCase):
         self.testClassJson.deleteFile()
         self.testClassJson.createFileIfDoesntExist()
         temples: List = self.testlist[0]
-        self.testClassJson.writeJsonFile(temples)
-        self.assertEqual(temples, self.testClassJson.readJsonFile())
+        self.testClassJson.writeFile(temples)
+        self.assertEqual(temples, self.testClassJson.readFile())
 
         # Tuple
         self.testClassJson.deleteFile()
         self.testClassJson.createFileIfDoesntExist()
         temples: Tuple = self.testlist[1]
-        self.testClassJson.writeJsonFile(temples)
-        self.assertEqual(temples, self.testClassJson.readJsonFile())
+        self.testClassJson.writeFile(temples)
+        self.assertEqual(temples, self.testClassJson.readFile())
 
         # Dict
         self.testClassJson.deleteFile()
         self.testClassJson.createFileIfDoesntExist()
         temples: Dict = {str(k): v for k, v in self.testlist[2].items()}  # все ключи должны быть типа str
-        self.testClassJson.writeJsonFile(temples)
-        self.assertEqual(temples, self.testClassJson.readJsonFile())
+        self.testClassJson.writeFile(temples)
+        self.assertEqual(temples, self.testClassJson.readFile())
 
         # Set
         temples: Set = self.testlist[3]
-        self.testClassJson.writeJsonFile(temples, lang="ru")
-        self.assertEqual({str(k) for k in temples}, self.testClassJson.readJsonFile())
+        self.testClassJson.writeFile(temples, lang="ru")
+        self.assertEqual({str(k) for k in temples}, self.testClassJson.readFile())
 
     def test_appendJsonListFile(self):
         # Првоекра дозаписи в файл разных структур данных
@@ -126,35 +126,35 @@ class TestJson(unittest.TestCase):
         self.testClassJson.deleteFile()
         self.testClassJson.createFileIfDoesntExist()
         tempers: List = self.testlist[0]
-        self.testClassJson.writeJsonFile(tempers)
+        self.testClassJson.writeFile(tempers)
         self.testClassJson.appendJsonListFile(tempers)
         tempers += tempers
-        self.assertEqual(tempers, self.testClassJson.readJsonFile())
+        self.assertEqual(tempers, self.testClassJson.readFile())
 
         # Tuple
         self.testClassJson.deleteFile()
         self.testClassJson.createFileIfDoesntExist()
         tempers: Tuple = self.testlist[1]
-        self.testClassJson.writeJsonFile(tempers)
+        self.testClassJson.writeFile(tempers)
         self.testClassJson.appendJsonListFile(tempers)
         tempers += tempers
-        self.assertEqual(tempers, self.testClassJson.readJsonFile())
+        self.assertEqual(tempers, self.testClassJson.readFile())
 
         # Dict
         self.testClassJson.deleteFile()
         self.testClassJson.createFileIfDoesntExist()
         tempers: Dict = {str(k): v for k, v in self.testlist[2].items()}  # все ключи должны быть типа str
-        self.testClassJson.writeJsonFile(tempers)
+        self.testClassJson.writeFile(tempers)
         self.testClassJson.appendJsonListFile(tempers)
         tempers.update(tempers)
-        self.assertEqual(tempers, self.testClassJson.readJsonFile())
+        self.assertEqual(tempers, self.testClassJson.readFile())
 
         # Set
         tempers: Set = self.testlist[3]
-        self.testClassJson.writeJsonFile(tempers, lang="ru")
+        self.testClassJson.writeFile(tempers, lang="ru")
         self.testClassJson.appendJsonListFile(tempers)
         tempers.update(tempers)
-        self.assertEqual({str(k) for k in tempers}, self.testClassJson.readJsonFile())
+        self.assertEqual({str(k) for k in tempers}, self.testClassJson.readFile())
 
     # Этот метод запускаетсья ПОСЛЕ каждой функции теста
     def tearDown(self):
@@ -179,9 +179,7 @@ class TestCsvFile(unittest.TestCase):
             [[1, 23, 41, 5],
              [21, 233, 46, 35],
              [13, 233, 26, 45],
-             [12, 213, 43, 56]]
-
-            , FlagDataConferToStr=True, header=("Даннык", "Data", "Числа", "Num"))
+             [12, 213, 43, 56]], FlagDataConferToStr=True, header=("Даннык", "Data", "Числа", "Num"))
 
         #  Тест на чтение Cvs файла
         self.assertEqual(self.cvs_file.readFile(),
@@ -226,9 +224,7 @@ class TestCsvFile(unittest.TestCase):
             [[1, 23, 41, 5],
              [21, 233, 46, 35],
              [13, 233, 26, 45],
-             [12, 213, 43, 56]]
-
-            , FlagDataConferToStr=True, header=("Даннык", "Data", "Числа", "Num"))
+             [12, 213, 43, 56]], FlagDataConferToStr=True, header=("Даннык", "Data", "Числа", "Num"))
 
         self.cvs_file.appendFile([['2323', '23233', '23']])
 
@@ -238,6 +234,7 @@ class TestCsvFile(unittest.TestCase):
 
     def test_ordinary(self):
         # Тест записи Однмерного массива
+
         self.cvs_file.deleteFile()
         self.cvs_file.writeFile([123, 123, 222, 1, 312, 223, 2], FlagDataConferToStr=True)
         self.cvs_file.writeFile([123, 123, 222, 1, 2], FlagDataConferToStr=True)
@@ -254,8 +251,7 @@ class TestCsvFile(unittest.TestCase):
         self.cvs_file.writeFile(
             [[123, 123, 222, 1, 312, 223, 2],
              [4123, 1233, 222, 1, 3312, 223, 2],
-             ]
-            , FlagDataConferToStr=True)
+             ], FlagDataConferToStr=True)
         self.cvs_file.writeFile(
             [[123, 123, 222, 1, 312, 223, 2],
              [4123, 1233, '222', 1, 3312, 223, 2],
@@ -269,8 +265,7 @@ class TestCsvFile(unittest.TestCase):
         self.cvs_file.appendFile(
             [[123, 123, 222, 1, 312, 223, 2],
              [4123, 1233, 222, 1, 3312, 223, 2],
-             ]
-            , FlagDataConferToStr=True)
+             ], FlagDataConferToStr=True)
         self.cvs_file.appendFile(
             [[123, 123, 222, 1, 312, 223, 2],
              [4123, 1233, '222', 1, 3312, 223, 2],
@@ -298,18 +293,38 @@ class TestCsvFile(unittest.TestCase):
         self.assertEqual(self.cvs_file.readFile(),
                          [['123.12', '123.43', '222.2', '1.5', '31.2', '22.3', '2.5']])
 
+        #
         # Тест записи комберированно
         self.cvs_file.writeFile([12, 123.43, 'Hello Привет', '1.5', 31.2, 22.3, 2.5]),
         self.assertEqual(self.cvs_file.readFile(),
                          [['12', '123.43', 'Hello Привет', '1.5', '31.2', '22.3', '2.5']])
 
-
     def __del__(self):
         self.cvs_file.deleteFile()
 
 
+class TestPickleFile(unittest.TestCase):
+
+    def setUp(self):
+        self.name_file = "test_pickle.pkl"
+        self.pk = PickleFile(self.name_file)
+        self.pk.deleteFile()
+
+    def test_writeFile_and_readFile(self):
+        # Проверка записи данных
+        test_data = [
+            (1, 2, 3, 4),
+            [12, 23, 221],
+            ["1231", 12, (2, 22)],
+            {213123, 123213},
+            {'s1': '213'},
+        ]
+
+        for td in test_data:
+            self.pk.writeFile(td)
+            self.assertEqual(self.pk.readFile(), td)
+            self.pk.deleteFile()
+
+
 if __name__ == '__main__':
     unittest.main()
-
-# self.assertRaises(TypeError,self.testClass.sums,"123123")
-# self.assertRaises(TypeError, self.testClass.sums, [123])
