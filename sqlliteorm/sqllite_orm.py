@@ -4,9 +4,8 @@ from os.path import exists, abspath
 from re import findall
 from sqlite3 import Binary
 from typing import List, Tuple, Dict, Union
-
 from file import TxtFile
-from sqlliteorm.sql_modules import *
+from sqlliteorm.sqlmodules import *
 
 
 class SqlLiteQrm:
@@ -22,6 +21,9 @@ class SqlLiteQrm:
         self.__name_db = name_dbf
         self.__header_table: Dict[
             str, Dict[str, tuple]] = self.__update_header_table()  # Тут храниться типы столбцов таблциы
+
+
+
 
     @property
     def name_db(self):
@@ -367,8 +369,8 @@ class SqlLiteQrm:
             res = cursor.fetchall()
 
         if FlagPrint:
-            sqlSelect = "".join(findall(r"SELECT ([\w, *]+) FROM", request))
-            NameTable = "".join(findall(r"SELECT [\w, *]+ FROM ([\w]+)[A-Z]*", request))
+            sqlSelect = "".join(findall(r"SELECT ([\w, *()'\\]+) FROM", request)) #"".join(findall(r"SELECT ([\w, *]+) FROM", request))
+            NameTable = "".join(findall(r"SELECT [\w, *()'\\]+ FROM ([\w]+)[A-Z]*", request))#"".join(findall(r"SELECT [\w, *]+ FROM ([\w]+)[A-Z]*", request))
             if sqlSelect == "*":
                 sqlSelect = ", ".join(self.header_table[NameTable].keys())
             print(self.__print_table(NameTable, sqlSelect, res, FlagPrint))
