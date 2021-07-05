@@ -1,10 +1,13 @@
 #########################################
+import sys
 from hashlib import scrypt
 
 from Cryptodome.Cipher import AES
 from Cryptodome.Random import get_random_bytes
 
-from file_pack.file import TxtFile
+
+sys.path.append(r"C:\Users\denis\PycharmProjects\file")
+from file.file import TxtFile
 
 
 class AsynchronousEncryption:
