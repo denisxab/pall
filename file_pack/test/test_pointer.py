@@ -3,9 +3,9 @@ import unittest
 from file_pack.pointer import Ptr
 
 
-class MyTestCase(unittest.TestCase):
+class Test_pointer(unittest.TestCase):
 
-    @unittest.skip("")
+    @unittest.skip("Test_pointer")
     def test_something(self):
         def a(arg: Ptr):
             arg.data = 10
@@ -41,8 +41,6 @@ class MyTestCase(unittest.TestCase):
     def test__eq__(self):
         test_pt = Ptr(12321)
         test_pt2 = Ptr(12321)
-        print((test_pt == test_pt2))
-
         self.assertEqual(test_pt, test_pt2)
 
 

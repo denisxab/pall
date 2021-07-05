@@ -74,7 +74,7 @@ class Test_SyncModDataSkippIterSortQueue(unittest.TestCase):
                 continue
 
     @classmethod
-    @unittest.skip("Test_SyncModDataSkippIter1")
+    @unittest.skip("Test_SyncModDataSkippIterSortQueue")
     def test_all(cls):
         threadList = []
         nameList = SyncModData.CreateThread(5, SyncModDataSkippIterSortQueue)
@@ -107,7 +107,7 @@ class Test_SyncModDataPauseIterQueue(unittest.TestCase):
                 continue
 
     @classmethod
-    # @unittest.skip("Test_SyncModDataSkippIter")
+    @unittest.skip("Test_SyncModDataPauseIterQueue")
     def test_all(cls):
         threadList = []
         nameList = SyncModData.CreateThread(5, SyncModDataPauseIterQueue)
