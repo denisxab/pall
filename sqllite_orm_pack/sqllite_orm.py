@@ -4,8 +4,8 @@ from os.path import exists, abspath
 from re import findall
 from sqlite3 import Binary
 from typing import List, Tuple, Dict, Union
-from file import TxtFile
-from sqlliteorm.sqlmodules import *
+from file_pack.file import TxtFile
+from sqllite_orm_pack.sqlmodules import *
 
 
 class SqlLiteQrm:

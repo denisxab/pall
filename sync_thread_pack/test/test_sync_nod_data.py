@@ -3,7 +3,7 @@ import threading
 import time
 import unittest
 from sys import getsizeof
-from SyncThread.sync_mod_data import SyncModData, SyncModDataSkippIterQueue, SyncModDataSkippIterSortQueue, \
+from sync_thread_pack.sync_mod_data import SyncModData, SyncModDataSkippIterQueue, SyncModDataSkippIterSortQueue, \
     SyncModDataPauseIterQueue
 
 SyncModDataSkippIterQueue.DEBUG_INFO = True

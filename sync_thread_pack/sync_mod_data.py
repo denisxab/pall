@@ -81,7 +81,7 @@ class SyncModDataSkippIterQueue(SyncModData):
 
     # Пример использования
     """
-    from SyncThread.sync_mod_data import SyncModDataSkippIterQueue
+    from sync_thread_pack.sync_mod_data import SyncModDataSkippIterQueue
     SyncModDataSkippIterQueue.DEBUG_INFO = True
     
     def ExampleFun(item_thread: SyncModDataSkippIterQueue) -> None:
@@ -180,7 +180,7 @@ class SyncModDataSkippIterSortQueue(SyncModData):
 
     # Пример использования
     """
-    from SyncThread.sync_mod_data import SyncModDataSkippIterSortQueue
+    from sync_thread_pack.sync_mod_data import SyncModDataSkippIterSortQueue
     SyncModDataSkippIterSortQueue.DEBUG_INFO = True
     
     def testTherad(item_thread: SyncModDataSkippIterSortQueue) -> None:

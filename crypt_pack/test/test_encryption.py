@@ -1,7 +1,7 @@
 import unittest
 from os import listdir
 
-from encryption import AsynchronousEncryption, AsynchronousEncryptionFile
+from crypt_pack.encryption import AsynchronousEncryption, AsynchronousEncryptionFile
 
 
 class TestAsynchronousEncryption(unittest.TestCase):

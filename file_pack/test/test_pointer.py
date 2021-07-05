@@ -1,6 +1,6 @@
 import unittest
 
-from pointer import Ptr
+from file_pack.pointer import Ptr
 
 
 class MyTestCase(unittest.TestCase):
