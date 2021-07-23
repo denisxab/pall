@@ -6,7 +6,7 @@ from Cryptodome.Cipher import AES
 from Cryptodome.Random import get_random_bytes
 
 
-sys.path.append(r"C:\Users\denis\PycharmProjects\file")
+sys.path.append(r"..\file")
 from file.file import TxtFile
 
 
